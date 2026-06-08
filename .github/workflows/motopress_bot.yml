@@ -1,0 +1,35 @@
+name: Contramanillar Bot — Generador Automático
+
+on:
+  schedule:
+    - cron: '0 6,12,18,0 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Solo generar sin publicar'
+        required: false
+        default: 'false'
+
+jobs:
+  generar-y-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { token: '${{ secrets.GITHUB_TOKEN }}' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11', cache: 'pip' }
+      - run: pip install -r requirements.txt
+      - uses: actions/cache@v4
+        with: { path: published_hashes.json, key: 'published-${{ github.run_number }}', restore-keys: 'published-' }
+      - name: Ejecutar Bot
+        env:
+          ANTHROPIC_API_KEY: '${{ secrets.ANTHROPIC_API_KEY }}'
+          EXA_API_KEY: '${{ secrets.EXA_API_KEY }}'
+          WP_URL: '${{ secrets.WP_URL }}'
+          WP_USER: '${{ secrets.WP_USER }}'
+          WP_APP_PASS: '${{ secrets.WP_APP_PASS }}'
+        run: python main.py
+      - if: always()
+        uses: actions/cache/save@v4
+        with: { path: published_hashes.json, key: 'published-${{ github.run_number }}' }
