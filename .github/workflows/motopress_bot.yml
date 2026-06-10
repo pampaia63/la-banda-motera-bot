@@ -1,8 +1,8 @@
-name: Contramanillar Bot â Generador AutomÃ¡tico
+name: Contramanillar Bot Ã¢ÂÂ Generador AutomÃÂ¡tico
 
 on:
   schedule:
-    # - cron: '0 6,12,18,0 * * *'  # PAUSADO - activar cuando WordPress esté listo
+    - cron: '0 6,12,18,0 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
