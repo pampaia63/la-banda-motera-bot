@@ -1,12 +1,12 @@
 """
-Editor Agent — Genera articulos editoriales con SEO integrado.
+Editor Agent â Genera articulos editoriales con SEO integrado.
 """
 import os, anthropic, json, re
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 SYS_EDI = "Sos el editor jefe de Contramanillar, una revista digital de motos en espanol rioplatense. Tu escritura es apasionada, directa y tecnicamente precisa. Nunca usas frases genericas de IA."
-SYS_SEO = "Sos especialista SEO para portales de nicho en espanol. Devolvés solo JSON valido sin backticks."
+SYS_SEO = "Sos especialista SEO para portales de nicho en espanol. DevolvÃ©s solo JSON valido sin backticks."
 
 def generar_articulo(n):
     p = f"""Escribi un articulo editorial para Contramanillar sobre:
@@ -28,7 +28,7 @@ FORMATO (markdown):
 REGLAS: Max 550 palabras, voz activa, usar 'vos'."""
 
     r = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6",
         max_tokens=1000,
         system=SYS_EDI,
         messages=[{"role": "user", "content": p}]
@@ -39,11 +39,11 @@ REGLAS: Max 550 palabras, voz activa, usar 'vos'."""
     s2 = f"""Titulo: {tit}
 Contenido: {md[:200]}
 
-Devolvé SOLO este JSON:
+DevolvÃ© SOLO este JSON:
 {{"seo_title":"60 chars","meta_description":"150-155 chars","slug":"url-amigable","focus_keyword":"1-3 palabras","tags":["tag1","tag2","tag3"],"categoria":"MotoGP|Noticias|Reviews|Adventure|Custom|Electrica|Seguridad|Tecnica"}}"""
 
     r2 = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6",
         max_tokens=400,
         system=SYS_SEO,
         messages=[{"role": "user", "content": s2}]
