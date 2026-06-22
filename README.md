@@ -1,6 +1,6 @@
-# 🏍 Contramanillar Bot
+# 🏍 La Banda Motera Bot
 
-Sistema automatizado de generación editorial para Contramanillar.lat.
+Sistema automatizado de generación editorial para La Banda Motera.lat.
 Corre cada 6 horas vía GitHub Actions. Cero intervención manual.
 
 ---
