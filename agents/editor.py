@@ -5,11 +5,11 @@ import os, anthropic, json, re
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
-SYS_EDI = "Sos el editor jefe de Contramanillar, una revista digital de motos en espanol rioplatense. Tu escritura es apasionada, directa y tecnicamente precisa. Nunca usas frases genericas de IA."
+SYS_EDI = "Sos el editor jefe de La Banda Motera, una revista digital de motos en espanol rioplatense. Tu escritura es apasionada, directa y tecnicamente precisa. Nunca usas frases genericas de IA."
 SYS_SEO = "Sos especialista SEO para portales de nicho en espanol. DevolvÃ©s solo JSON valido sin backticks."
 
 def generar_articulo(n):
-    p = f"""Escribi un articulo editorial para Contramanillar sobre:
+    p = f"""Escribi un articulo editorial para La Banda Motera sobre:
 Titulo: {n['title']}
 Fuente: {n['source']}
 Fecha:  {n['date']}
