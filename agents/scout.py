@@ -105,3 +105,7 @@ def buscar_noticias(max_noticias=5):
     nuevos_hashes = published | {n["hash"] for n in noticias}
     save_published(nuevos_hashes)
     return noticias
+
+
+# Alias para compatibilidad con main.py
+run = buscar_noticias
