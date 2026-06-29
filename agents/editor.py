@@ -158,7 +158,7 @@ FORMATO DE RESPUESTA - JSON con esta estructura exacta:
   "seo_title": "titulo para SEO (maximo 60 caracteres)",
   "meta_description": "meta description (150-155 caracteres exactos)",
   "slug": "url-amigable-sin-tildes-ni-espacios",
-  "categoria": "una de: Noticias | Reviews | Adventure | Electrica | MotoGP | Custom | Seguridad | Tecnica",
+  "categoria": "una de: Competición | Reviews | Nuevos Lanzamientos | Marcas | Comparativas | Historias Moteras",
   "tags": ["tag1", "tag2", "tag3", "tag4"],
   "imagen_prompt": "prompt fotografico en ingles para generar imagen IA de la moto: marca modelo año, tipo de moto, colores, fondo neutro, sin personas, alta calidad fotografica, photorealistic"
 }}
