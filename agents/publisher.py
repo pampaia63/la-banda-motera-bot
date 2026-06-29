@@ -154,7 +154,28 @@ def publicar(a):
 
     # Tags y categoria
     tags = [get_or_create(t, h, "tags") for t in a.get("tags", [])]
-    cat = get_or_create(a.get("categoria", "Noticias"), h, "categories")
+    # Mapa de categorías: nombre (viejo o nuevo) → ID real en WordPress
+    CATEGORIA_IDS = {
+        # Nombres nuevos
+        "Competición":        9,
+        "Reviews":            19,
+        "Nuevos Lanzamientos": 15,
+        "Marcas":             44,
+        "Comparativas":       46,
+        "Historias Moteras":  47,
+        # Fallbacks nombres viejos del editor
+        "Noticias":           9,   # → Competición
+        "MotoGP":             9,   # → Competición
+        "Adventure":          15,  # → Nuevos Lanzamientos
+        "Custom":             44,  # → Marcas
+        "Electrica":          15,  # → Nuevos Lanzamientos
+        "Técnica":            19,  # → Reviews
+        "Tecnica":            19,  # → Reviews
+        "Seguridad":          19,  # → Reviews
+    }
+    cat_nombre = a.get("categoria", "Reviews")
+    cat = CATEGORIA_IDS.get(cat_nombre, 19)  # default: Reviews (ID 19)
+    print(f"  [Publisher] Categoría: '{cat_nombre}' → ID {cat}")
 
     # Programar para manana 17:00
     now = datetime.now()
