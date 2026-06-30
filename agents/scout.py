@@ -13,29 +13,60 @@ PUBLISHED_LOG = "published_hashes.json"
 # Prioriza motos que se venden en AR/ES/MX y noticias relevantes para esos mercados
 
 QUERIES = [
-    # --- LANZAMIENTOS con foco en mercados objetivo ---
-    "nueva moto 2026 lanzamiento Argentina España México precio disponibilidad",
-    "moto mediana cilindrada 300cc 400cc 500cc 650cc 800cc lanzamiento 2025 2026",
-    "KTM Duke Adventure 2026 nueva moto lanzamiento precio",
-    "Honda CB CBR XR Africa Twin 2026 novedad presentacion",
-    "Yamaha MT Tenere XSR 2026 nueva moto lanzamiento",
-    "Benelli TRK Leoncino 2026 novedad moto lanzamiento Argentina",
-    "CFMoto Moto Morini QJ Motor Voge 2026 nueva moto",
-    "Royal Enfield Himalayan Meteor 2026 novedad lanzamiento",
-    "Ducati Aprilia Triumph KTM adventure naked 2026 novedad",
-    # --- REVIEWS relevantes para LATAM/España ---
-    "review test prueba moto trail adventure naked 2025 2026 opinion",
-    "comparativa moto mediana cilindrada trail adventure naked 2026",
-    # --- COMPETICIÓN de interés pan-hispano ---
-    "MotoGP Superbike WorldSBK carrera resultado 2025 campeonato",
-    "rally dakar moto 2025 2026 resultado etapa",
-    # --- MERCADO local Argentina España México ---
-    "moto mas vendida Argentina 2025 2026 patentamiento estadistica",
-    "mercado motocicletas España Mexico ventas 2025 2026 tendencia",
-    # --- CULTURA Y MARCAS ---
-    "custom cafe racer scrambler moto historia diseño especial",
-    "moto electrica 2026 novedad autonomia precio mercado",
+    # --- LANZAMIENTOS Argentina/Cono Sur ---
+    "nueva moto lanzamiento Argentina 2025 2026 precio disponible",
+    "moto nueva llega Argentina Colombia Chile Uruguay 2026",
+    "Benelli CFMoto QJ Motor Moto Morini Royal Enfield lanzamiento Argentina",
+    "Zontes Voge Rieju beta nueva moto Argentina España 2026",
+    # --- LANZAMIENTOS España ---
+    "nueva moto lanzamiento España 2025 2026 precio presentacion",
+    "KTM Honda Yamaha Kawasaki BMW Ducati Aprilia Triumph novedad España 2026",
+    # --- LANZAMIENTOS México/LATAM ---
+    "nueva moto lanzamiento Mexico Colombia 2025 2026 precio",
+    "Italika Honda Yamaha Kawasaki novedad Mexico 2026",
+    # --- MODELOS CLAVE PARA LOS 3 MERCADOS ---
+    "moto mediana cilindrada 300cc 500cc 650cc 800cc nueva 2026",
+    "trail adventure naked scrambler nuevo modelo 2025 2026",
+    # --- REVIEWS Y COMPARATIVAS ---
+    "review prueba test moto trail adventure naked 2025 2026",
+    "comparativa moto mediana cilindrada trail adventure 2026",
+    # --- COMPETICIÓN pan-hispana ---
+    "MotoGP Moto2 Moto3 carrera resultado gran premio 2025 2026",
+    "Superbike WorldSBK carrera resultado campeonato 2025",
+    "Rally Dakar motos resultado etapa 2025 2026",
+    "superbike argentina enduro argentina motocross latam 2026",
+    # --- HISTORIAS MOTERAS Y CULTURA ---
+    "historia moto iconica clasica legendaria marca motocicleta",
+    "cultura motera cafe racer scrambler custom historia origen",
+    "piloto moto legendario historia campeonato icono",
+    "moto electrica 2026 novedad autonomia precio España Argentina",
 ]
+
+# Marcas SIN presencia en LATAM ni España — excluir sus noticias
+MARCAS_IRRELEVANTES = [
+    # Marcas exclusivamente asiáticas o de EE.UU. sin distribución confirmada
+    "zero motorcycles",  # moto eléctrica cara, sin red en LATAM
+    "indian motorcycle",  # muy marginal en LATAM
+    "norton",  # sin presencia real
+    "ural",    # rusa, sin presencia
+    "cleveland cyclewerks",
+    "curtiss motorcycle",
+    "arch motorcycle",
+    "buell",
+    # Marcas japonesas de alta gama sin presencia local
+    "confederate motors",
+    # Marcas de competición pura sin road relevance
+    "husaberg",
+]
+
+def is_marca_relevante(title, url=""):
+    """Excluye noticias de marcas irrelevantes para LATAM/España."""
+    text = (title + " " + url).lower()
+    for marca in MARCAS_IRRELEVANTES:
+        if marca in text:
+            print(f"  [Scout] Excluida (marca irrelevante): {title[:50]}")
+            return False
+    return True
 
 # Palabras que indican que el resultado es sobre autos, no motos
 AUTO_KEYWORDS = [
@@ -232,6 +263,10 @@ def buscar_noticias(max_noticias=5):
                 # Filtrar si es sobre autos, no motos
                 if not is_moto_content(title, url):
                     print(f"  [Scout] Descartado (no es moto): {title[:60]}")
+                    continue
+
+                # Filtrar marcas sin relevancia en LATAM/España
+                if not is_marca_relevante(title, url):
                     continue
 
                 h = slug_hash(title)
