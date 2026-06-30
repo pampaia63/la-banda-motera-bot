@@ -126,41 +126,52 @@ def buscar_video_youtube(titulo):
     return {"url": YOUTUBE_CHANNEL_URL, "titulo": "Isaias Rider - Canal de motos", "marca": marca_encontrada or ""}
 
 def generar_articulo(noticia, voz):
-    """Genera un articulo editorial rico, con specs reales y conocimiento profundo."""
+    """Genera un articulo editorial extenso, con specs reales, conocimiento profundo e imagenes por seccion."""
 
     prompt = f"""Sos {voz['nombre']}, periodista de motos que escribe para La Banda Motera desde {voz['ubicacion']}.
 {voz['bio']}
 Dialecto: {voz['dialecto']}
 
-Escrihi un articulo editorial EXTENSO y RICO sobre la siguiente noticia de motos:
+Escribi un articulo editorial EXTENSO, RICO y DETALLADO sobre la siguiente noticia de motos:
 
 TITULO DE REFERENCIA: {noticia['titulo']}
 FUENTE/CONTEXTO: {noticia['resumen'][:600] if noticia.get('resumen') else 'Sin resumen disponible'}
 URL FUENTE: {noticia.get('url', '')}
 
 INSTRUCCIONES CRITICAS:
-1. El articulo debe tener entre 700 y 1000 palabras. No menos.
-2. El lector debe terminar de leer sabiendo exactamente de que moto hablamos: motor, potencia, tecnologia, precio aproximado si se conoce, puntos fuertes y debiles reales.
-3. Compara la moto con al menos UNO o DOS rivales directos del mercado (motos reales, no inventadas).
-4. Da tu opinion editorial fundamentada. No seas neutro ni tibio - tenes que tener una postura.
+1. El articulo completo (titulo + bajada + firma + todos los subtitulos + cuerpo) debe tener aproximadamente 2.420 palabras. Esto es un piso, no un techo: preferi pasarte un poco a quedarte corto. Un articulo de 700-900 palabras NO es aceptable - tiene que sentirse como una nota de revista especializada, profunda y completa, no un resumen superficial.
+2. Para lograr esa extension, desarrolla en profundidad: contexto historico de la marca o el segmento, motor y prestaciones con detalle tecnico real, suspension y ciclistica, frenos y electronica, ergonomia, diseño y calidad percibida, comparacion con AL MENOS DOS rivales directos reales del mercado, precio y posicionamiento, y una conclusion editorial fuerte. Cada uno de estos bloques merece su propio subtitulo y al menos 150-200 palabras de desarrollo real, con datos, no relleno.
+3. El lector debe terminar sabiendo exactamente de que moto hablamos: motor, potencia, torque, tecnologia, precio aproximado si se conoce, puntos fuertes y debiles reales.
+4. Da tu opinion editorial fundamentada. No seas neutro ni tibio - tenes que tener una postura clara.
 5. Usa el dialecto de tu perfil de forma natural, sin exagerar.
 6. NUNCA menciones "segun la fuente" ni atribuyas texto a un periodista externo. Vos sos el unico autor.
-7. NUNCA copies texto de la fuente - todo es original.
-8. Estructura con subtitulos (usa ## para H2 y ### para H3 en markdown).
-9. Incluye una seccion "Ficha tecnica rapida" con los datos clave en formato lista al final.
+7. NUNCA copies texto de la fuente - todo es original, redactado desde tu conocimiento del tema.
+8. Estructura con subtitulos (usa ## para H2 en markdown). Necesitas minimo 7-8 subtitulos H2 para sostener la extension pedida.
+9. Incluye una seccion "Ficha tecnica rapida" con los datos clave en formato lista al final, antes de la conclusion.
 10. Termina con un parrafo de conclusion que sea opinion editorial fuerte.
+
+IMAGENES POR SECCION - CRITICO:
+Ademas del contenido, tenes que identificar EXACTAMENTE en que puntos del articulo deberia ir una imagen de apoyo, y describir esa imagen. No alcanza con una sola imagen para todo el articulo: necesitamos entre 4 y 6 imagenes distribuidas en los puntos mas relevantes (ej: una imagen general de la moto al inicio, una del motor o detalle tecnico cuando se habla de motor/suspension/frenos, una del contexto historico de la marca si se menciona, una de la moto en accion o en uso real, una del rival comparado si aplica, una del tablero/cockpit si se describe tecnologia).
+
+Para cada imagen necesaria, indica:
+- "seccion": el titulo EXACTO del H2 despues del cual debe insertarse esa imagen (debe coincidir letra por letra con un H2 que aparece en tu contenido_md)
+- "busqueda": una descripcion corta en español de que imagen se necesita, pensada para buscarla en paginas oficiales de marcas o revistas especializadas (ej: "Ducati Hypermotard V2 SP vista lateral estudio", "motor bicilindrico KTM 790 detalle", "Yamaha MT-07 2026 rival comparacion")
 
 FORMATO DE RESPUESTA - JSON con esta estructura exacta:
 {{
   "titulo": "titulo SEO atractivo (maximo 65 caracteres)",
   "bajada": "primer parrafo de gancho (2-3 oraciones que enganchen al lector)",
-  "contenido_md": "el articulo completo en markdown (sin el titulo ni la bajada que ya van aparte)",
+  "contenido_md": "el articulo completo en markdown (sin el titulo ni la bajada que ya van aparte), con minimo 7-8 H2, apuntando a 2420 palabras totales sumando todo el articulo",
   "seo_title": "titulo para SEO (maximo 60 caracteres)",
   "meta_description": "meta description (150-155 caracteres exactos)",
   "slug": "url-amigable-sin-tildes-ni-espacios",
   "categoria": "una de: Competición | Reviews | Nuevos Lanzamientos | Marcas | Comparativas | Historias Moteras",
   "tags": ["tag1", "tag2", "tag3", "tag4"],
-  "imagen_prompt": "prompt fotografico en ingles para generar imagen IA de la moto: marca modelo año, tipo de moto, colores, fondo neutro, sin personas, alta calidad fotografica, photorealistic"
+  "imagen_prompt": "prompt fotografico en ingles de la imagen principal/destacada: marca modelo año, tipo de moto, colores, fondo neutro, sin personas, alta calidad fotografica, photorealistic",
+  "imagenes_secciones": [
+    {{"seccion": "titulo exacto del H2", "busqueda": "descripcion corta de la imagen necesaria"}},
+    {{"seccion": "titulo exacto de otro H2", "busqueda": "descripcion corta de otra imagen necesaria"}}
+  ]
 }}
 
 Responde SOLO el JSON, sin texto antes ni despues, sin backticks."""
@@ -174,7 +185,7 @@ Responde SOLO el JSON, sin texto antes ni despues, sin backticks."""
         },
         json={
             "model": "claude-sonnet-4-6",
-            "max_tokens": 4000,
+            "max_tokens": 8000,
             "messages": [{"role": "user", "content": prompt}],
         },
     )
