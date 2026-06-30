@@ -9,18 +9,32 @@ from datetime import datetime, timedelta
 EXA_API_KEY = os.environ["EXA_API_KEY"]
 PUBLISHED_LOG = "published_hashes.json"
 
-# Queries especificas de motos - nunca de autos
+# Queries organizadas por mercado objetivo y tipo de contenido
+# Prioriza motos que se venden en AR/ES/MX y noticias relevantes para esos mercados
+
 QUERIES = [
-    "nueva moto lanzamiento 2026 motocicleta presentacion oficial",
-    "MotoGP Superbike WorldSBK resultados carrera campeonato 2025 2026",
-    "moto electrica scooter electrico novedad lanzamiento 2026",
-    "adventure trail enduro moto review test comparativa",
-    "custom cafe racer scrambler naked street fighter moto",
-    "moto tecnologia suspension frenos motor innovacion",
-    "rally dakar enduro cross country moto competicion",
-    "moto accesible precio economica trail mediana cilindrada",
-    "KTM Honda Yamaha Kawasaki BMW Ducati nueva moto 2026",
-    "Benelli CFMoto Moto Morini Rieju Royal Enfield novedad moto",
+    # --- LANZAMIENTOS con foco en mercados objetivo ---
+    "nueva moto 2026 lanzamiento Argentina España México precio disponibilidad",
+    "moto mediana cilindrada 300cc 400cc 500cc 650cc 800cc lanzamiento 2025 2026",
+    "KTM Duke Adventure 2026 nueva moto lanzamiento precio",
+    "Honda CB CBR XR Africa Twin 2026 novedad presentacion",
+    "Yamaha MT Tenere XSR 2026 nueva moto lanzamiento",
+    "Benelli TRK Leoncino 2026 novedad moto lanzamiento Argentina",
+    "CFMoto Moto Morini QJ Motor Voge 2026 nueva moto",
+    "Royal Enfield Himalayan Meteor 2026 novedad lanzamiento",
+    "Ducati Aprilia Triumph KTM adventure naked 2026 novedad",
+    # --- REVIEWS relevantes para LATAM/España ---
+    "review test prueba moto trail adventure naked 2025 2026 opinion",
+    "comparativa moto mediana cilindrada trail adventure naked 2026",
+    # --- COMPETICIÓN de interés pan-hispano ---
+    "MotoGP Superbike WorldSBK carrera resultado 2025 campeonato",
+    "rally dakar moto 2025 2026 resultado etapa",
+    # --- MERCADO local Argentina España México ---
+    "moto mas vendida Argentina 2025 2026 patentamiento estadistica",
+    "mercado motocicletas España Mexico ventas 2025 2026 tendencia",
+    # --- CULTURA Y MARCAS ---
+    "custom cafe racer scrambler moto historia diseño especial",
+    "moto electrica 2026 novedad autonomia precio mercado",
 ]
 
 # Palabras que indican que el resultado es sobre autos, no motos
@@ -31,13 +45,69 @@ AUTO_KEYWORDS = [
     "hibrido enchufable coche", "vehiculo electrico cuatro ruedas",
 ]
 
+# Palabras que indican noticias de motos irrelevantes para nuestros mercados
+IRRELEVANT_KEYWORDS = [
+    "australian superbike", "british superbike", "bsb",
+    "enduro australia", "enduro usa", "american flat track",
+    "prix de france", "isle of man tt",  # competiciones muy locales
+]
+
 def is_moto_content(title, url=""):
-    """Retorna False si el articulo parece ser sobre autos, no motos."""
+    """Retorna False si el articulo parece ser sobre autos, no motos,
+    o si es una competición completamente irrelevante para LATAM/España."""
     text = (title + " " + url).lower()
+    # Filtrar autos
     for kw in AUTO_KEYWORDS:
         if kw in text:
             return False
+    # Filtrar competiciones hiperespecíficas sin interés para nuestros mercados
+    for kw in IRRELEVANT_KEYWORDS:
+        if kw in text:
+            return False
     return True
+
+def calcular_relevancia(title, url="", resumen=""):
+    """
+    Puntúa la relevancia de una noticia para los mercados AR/ES/MX.
+    Mayor puntaje = más relevante = mayor prioridad.
+    """
+    text = (title + " " + url + " " + resumen).lower()
+    score = 0
+
+    # Motos que se venden en LATAM/España — alta relevancia
+    marcas_relevantes = [
+        "ktm", "honda", "yamaha", "kawasaki", "suzuki", "bmw",
+        "ducati", "triumph", "aprilia", "royal enfield", "benelli",
+        "cfmoto", "qj motor", "moto morini", "voge", "rieju",
+        "husqvarna", "gasgas", "beta", "sherco", "jawa",
+        "keller", "gilera", "zanella", "motomel", "corven", "mondial"
+    ]
+    for marca in marcas_relevantes:
+        if marca in text:
+            score += 3
+
+    # Palabras clave de interés editorial
+    keywords_positivos = [
+        "argentina", "españa", "mexico", "colombia", "latam",
+        "lanzamiento", "precio", "disponible", "llega",
+        "trail", "adventure", "naked", "enduro", "scrambler",
+        "review", "prueba", "test", "comparativa",
+        "motogp", "superbike", "campeonato"
+    ]
+    for kw in keywords_positivos:
+        if kw in text:
+            score += 1
+
+    # Penalizar si es muy específico de un mercado lejano
+    keywords_lejanos = [
+        "australian", "british", "american", "thai gp",
+        "indian open", "malaysian gp"
+    ]
+    for kw in keywords_lejanos:
+        if kw in text:
+            score -= 2
+
+    return score
 
 def titulo_similar(t1, t2, umbral=0.6):
     """Detecta si dos títulos son muy similares (mismo tema con distinta redacción)."""
@@ -179,16 +249,23 @@ def buscar_noticias(max_noticias=5):
                     continue
 
                 seen_hashes.add(h)
+                relevancia = calcular_relevancia(title, url, text)
                 candidatos.append({
                     "titulo": title,
                     "url": url,
                     "resumen": text[:500] if text else "",
                     "hash": h,
+                    "relevancia": relevancia,
                 })
         except Exception as e:
             print(f"  [Scout] Error en query '{q}': {e}")
             continue
 
+    # Ordenar por relevancia descendente antes de tomar los primeros N
+    candidatos.sort(key=lambda x: x.get("relevancia", 0), reverse=True)
+    print(f"  [Scout] Top candidatos por relevancia:")
+    for c in candidatos[:max_noticias]:
+        print(f"    [{c.get('relevancia',0):+d}] {c['titulo'][:60]}")
     noticias = candidatos[:max_noticias]
     nuevos_hashes = published | {n["hash"] for n in noticias}
     save_published(nuevos_hashes)
