@@ -225,16 +225,20 @@ TITULO: {noticia['titulo']}
 CONTEXTO: {noticia['resumen'][:400] if noticia.get('resumen') else 'Sin resumen'}
 URL: {noticia.get('url', '')}
 
-INSTRUCCIONES — NOTA DE LANZAMIENTO (400-600 palabras MÁXIMO):
+INSTRUCCIONES — NOTA DE LANZAMIENTO (mínimo 1000 palabras):
 1. Abrí con 2-3 oraciones de contexto editorial: por qué importa esta moto en el mercado actual.
-2. Ficha técnica rápida: motor, potencia, torque, peso, altura de asiento, capacidad de tanque, precio (si se conoce).
-3. Mercados de lanzamiento: ¿dónde llega? ¿Argentina, España, México? ¿Cuándo?
-4. 1-2 párrafos de info complementaria: rival directo, posicionamiento, equipamiento destacado.
-5. Cierre con una línea de opinión editorial directa y clara.
-6. Usa máximo 2 subtítulos H2 (## en markdown).
-7. NO es una review, NO hay test, NO hay "sensaciones al manejarla". Es una nota de lanzamiento informativa con voz editorial.
-8. Usa el dialecto de tu perfil de forma natural.
-9. NUNCA copies el texto fuente — todo original desde tu conocimiento.
+2. Contexto del segmento: qué lugar ocupa esta moto en el mercado, cómo llegó la marca hasta acá, qué vacío viene a llenar.
+3. Ficha técnica COMPLETA y detallada: motor, potencia, torque, cilindrada, refrigeración, caja de cambios, peso, altura de asiento, capacidad de tanque, neumáticos, frenos, suspensiones, electrónica.
+4. Mercados de lanzamiento: ¿dónde llega? ¿Argentina, España, México? ¿Cuándo? ¿A qué precio?
+5. Equipamiento destacado: qué trae de serie que la diferencia de la competencia.
+6. Análisis de rivales directos: compará con al menos 2 modelos que compiten en el mismo segmento, precio y perfil.
+7. ¿Para quién es esta moto? Perfil del usuario ideal.
+8. Cierre con opinión editorial clara y fundamentada: ¿llega a tiempo? ¿Tiene sentido? ¿Qué le falta?
+9. Usá 3-4 subtítulos H2 (## en markdown) para estructurar bien el artículo.
+10. NO es una review de manejo, pero sí un análisis editorial profundo basado en specs y contexto de mercado.
+11. Usá el dialecto de tu perfil de forma natural.
+12. NUNCA copies el texto fuente — todo original desde tu conocimiento.
+IMPORTANTE: El artículo completo debe tener MÍNIMO 1000 palabras. Contá bien antes de terminar.
 
 FORMATO JSON exacto:
 {{
@@ -264,15 +268,18 @@ TITULO: {noticia['titulo']}
 CONTEXTO: {noticia['resumen'][:500] if noticia.get('resumen') else 'Sin resumen'}
 URL: {noticia.get('url', '')}
 
-INSTRUCCIONES — NOTA DE COMPETICIÓN (700-900 palabras):
+INSTRUCCIONES — NOTA DE COMPETICIÓN (mínimo 1000 palabras):
 1. Abrí con el resultado central: quién ganó, en qué circuito, en qué campeonato.
 2. Desarrollá el relato de la carrera o evento: momentos clave, drama, batallas.
 3. Impacto en el campeonato: ¿cómo queda la tabla? ¿Qué significa para el título?
 4. Contexto de los protagonistas: resultados previos, situación en el campeonato.
-5. Párrafo de opinión editorial sobre lo que muestra esta carrera.
-6. Usá 3-4 subtítulos H2 para estructurar.
-7. Tono dinámico, como si contaras la carrera a alguien que no la vio.
-8. NUNCA inventes resultados — solo lo que esté en el contexto provisto.
+5. Párrafo de opinión editorial sobre lo que muestra esta carrera para el campeonato y el deporte.
+6. Datos técnicos si son relevantes: moto ganadora, setup notable, condiciones de pista.
+7. Historia del circuito o contexto del evento si suma información al lector.
+8. Usá 4-5 subtítulos H2 para estructurar bien el artículo.
+9. Tono dinámico, como si contaras la carrera a alguien que no la vio.
+10. NUNCA inventes resultados — solo lo que esté en el contexto provisto.
+IMPORTANTE: El artículo debe tener MÍNIMO 1000 palabras. Desarrollá cada sección con profundidad real.
 
 FORMATO JSON exacto:
 {{
@@ -322,7 +329,8 @@ INSTRUCCIONES — HISTORIA/CULTURA MOTERA (1200-1600 palabras):
 6. Si es sobre cultura/personajes: el impacto en la comunidad motera, anécdotas, legado.
 7. Opinión editorial al final: qué nos deja este pedazo de historia.
 8. 4-5 H2 para estructurar. Tono más pausado y reflexivo que una nota de lanzamiento.
-9. NUNCA copies texto fuente. Todo original desde tu conocimiento.
+9. NUNCA copies texto fuente. Todo original desde tu conoc
+IMPORTANTE: El artículo completo debe tener MÍNIMO 1000 palabras (idealmente 1200-1600). Desarrollá con riqueza narrativa.imiento.
 
 FORMATO JSON exacto:
 {{
@@ -353,7 +361,7 @@ FUENTE/CONTEXTO: {noticia['resumen'][:600] if noticia.get('resumen') else 'Sin r
 URL FUENTE: {noticia.get('url', '')}
 
 INSTRUCCIONES CRÍTICAS:
-1. ~2.420 palabras totales (título + bajada + firma + subtítulos + cuerpo). Piso, no techo.
+1. ~2.420 palabras totales (título + bajada + firma + subtítulos + cuerpo). Piso ABSOLUTO mínimo 1000 palabras, objetivo 2420.
 2. Desarrollá en profundidad: contexto histórico de la marca/segmento, motor y prestaciones con detalle técnico real, suspensión y ciclística, frenos y electrónica, ergonomía, diseño y calidad percibida, comparación con AL MENOS DOS rivales directos reales, precio y posicionamiento, conclusión editorial fuerte.
 3. Cada bloque merece su H2 y al menos 150-200 palabras de desarrollo real con datos.
 4. El lector termina sabiendo exactamente: motor, potencia, torque, tecnología, precio aproximado, puntos fuertes y débiles.
@@ -386,7 +394,7 @@ Responde SOLO el JSON, sin texto antes ni después, sin backticks."""
 
 
     # Tokens adaptados por tipo: lanzamiento=2000, competicion=4000, review=8000
-    max_tok = 2000 if es_lanzamiento else (4000 if es_competicion else 8000)
+    max_tok = 3500 if es_lanzamiento else (5000 if es_competicion else 8000)
     r = requests.post(
         "https://api.anthropic.com/v1/messages",
         headers={
