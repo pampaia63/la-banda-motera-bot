@@ -97,6 +97,7 @@ def buscar_imagen_real(titulo, imagen_prompt=None):
         )
 
         results = r.json().get("results", [])
+        print(f"  [Imagen] Exa encontró {len(results)} resultados en fuentes prioritarias")
 
         # Si no hay resultados con fuentes prioritarias, buscar sin restricción
         if not results:
@@ -129,9 +130,13 @@ def buscar_imagen_real(titulo, imagen_prompt=None):
                 # Intentar obtener la imagen OG de la página
                 resp = requests.get(url_pagina, headers=headers_browser, timeout=15)
                 if resp.status_code != 200:
+                    print(f"  [Imagen] {url_pagina[:50]} → HTTP {resp.status_code}, descartado")
                     continue
 
                 html = resp.text
+                if len(html) < 500:
+                    print(f"  [Imagen] {url_pagina[:50]} → respuesta muy corta ({len(html)} chars), posible bloqueo")
+                    continue
 
                 # Buscar og:image en el HTML
                 import re
@@ -179,7 +184,37 @@ def buscar_imagen_real(titulo, imagen_prompt=None):
                 print(f"  [Imagen] Error con {url_pagina[:40]}: {e_inner}")
                 continue
 
-        print(f"  [Imagen] No se encontró imagen real para: {titulo[:50]}")
+        # Fallback final: buscar en Wikimedia Commons (no bloquea bots, imagenes libres)
+        print(f"  [Imagen] Sin suerte en {len(results)} resultados, probando Wikimedia Commons...")
+        try:
+            wiki_query = requests.utils.quote(query[:60])
+            wiki_url = f"https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch={wiki_query}&srnamespace=6&format=json&srlimit=5"
+            wiki_resp = requests.get(wiki_url, headers=headers_browser, timeout=15)
+            wiki_data = wiki_resp.json()
+            search_results = wiki_data.get("query", {}).get("search", [])
+
+            for item in search_results:
+                titulo_archivo = item.get("title", "")
+                if not titulo_archivo.startswith("File:"):
+                    continue
+                # Obtener la URL directa de la imagen
+                info_url = f"https://commons.wikimedia.org/w/api.php?action=query&titles={requests.utils.quote(titulo_archivo)}&prop=imageinfo&iiprop=url&format=json"
+                info_resp = requests.get(info_url, headers=headers_browser, timeout=15)
+                info_data = info_resp.json()
+                pages = info_data.get("query", {}).get("pages", {})
+                for page_id, page_data in pages.items():
+                    imageinfo = page_data.get("imageinfo", [])
+                    if imageinfo:
+                        img_direct_url = imageinfo[0].get("url", "")
+                        if img_direct_url and img_direct_url.lower().endswith(('.jpg', '.jpeg', '.png')):
+                            img_resp = requests.get(img_direct_url, headers=headers_browser, timeout=20)
+                            if img_resp.status_code == 200 and len(img_resp.content) > 20000:
+                                print(f"  [Imagen] ✓ Encontrada en Wikimedia Commons: {titulo_archivo[:50]}")
+                                return img_resp.content
+        except Exception as e_wiki:
+            print(f"  [Imagen] Error en Wikimedia fallback: {e_wiki}")
+
+        print(f"  [Imagen] No se encontró imagen real para: {titulo[:50]} (probados {len(results)} resultados + Wikimedia)")
         return None
 
     except Exception as e:
