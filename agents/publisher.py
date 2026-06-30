@@ -55,34 +55,134 @@ def get_or_create(name, headers, ep):
     except Exception:
         return 0
 
-def generar_imagen_ia(titulo, imagen_prompt=None):
+def buscar_imagen_real(titulo, imagen_prompt=None):
     """
-    Genera una imagen con IA usando Pollinations.ai (gratis, sin API key).
+    Busca una imagen real de la moto usando Exa.
+    Prioriza páginas oficiales de marcas y revistas especializadas.
     Devuelve el contenido binario de la imagen o None si falla.
     """
     try:
-        # Construir prompt fotografico de la moto
-        if imagen_prompt:
-            prompt = imagen_prompt
-        else:
-            # Extraer marca y modelo del titulo para el prompt
-            prompt = f"Professional motorcycle photography, {titulo[:80]}, no people, studio lighting, photorealistic, high detail, 4k"
+        # Construir query de búsqueda específica para la moto
+        query = imagen_prompt or titulo
+        # Extraer marca y modelo para una búsqueda más precisa
+        query_img = f"{query[:80]} official press photo motorcycle"
 
-        # Limpiar el prompt para la URL
-        prompt_encoded = requests.utils.quote(prompt)
-        url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=1280&height=720&nologo=true&enhance=true&model=flux"
+        print(f"  [Imagen] Buscando imagen real: {query[:60]}...")
 
-        print(f"  [Imagen] Generando con IA: {prompt[:60]}...")
-        r = requests.get(url, timeout=60)
+        # Fuentes prioritarias: páginas oficiales y revistas especializadas
+        fuentes_prioritarias = [
+            "ducati.com", "ktm.com", "yamaha-motor.eu", "honda.com",
+            "kawasaki.com", "bmw-motorrad.com", "aprilia.com", "triumph.co.uk",
+            "benelli.com", "cfmoto.com", "royalenfield.com", "husqvarna-motorcycles.com",
+            "moto-morini.com", "rieju.com", "sherco.com", "beta-motor.it",
+            "revzilla.com", "motociclismo.es", "motoforum.pl", "motorrad.de",
+            "cycleworld.com", "visordown.com", "bennetts.co.uk", "mcnews.com.au",
+            "motosnet.com", "motociclismo.com.ar", "motolatino.com"
+        ]
 
-        if r.status_code == 200 and len(r.content) > 10000:
-            print(f"  [Imagen] OK - {len(r.content)//1024}KB")
-            return r.content
-        else:
-            print(f"  [Imagen] Fallo: status {r.status_code}, size {len(r.content)}")
-            return None
+        r = requests.post(
+            "https://api.exa.ai/search",
+            headers={"x-api-key": EXA_API_KEY, "Content-Type": "application/json"},
+            json={
+                "query": query_img,
+                "numResults": 8,
+                "type": "neural",
+                "includeDomains": fuentes_prioritarias,
+                "contents": {
+                    "text": {"maxCharacters": 100},
+                    "highlights": {"numSentences": 1}
+                },
+            },
+            timeout=30
+        )
+
+        results = r.json().get("results", [])
+
+        # Si no hay resultados con fuentes prioritarias, buscar sin restricción
+        if not results:
+            print(f"  [Imagen] Sin resultados en fuentes prioritarias, buscando en general...")
+            r2 = requests.post(
+                "https://api.exa.ai/search",
+                headers={"x-api-key": EXA_API_KEY, "Content-Type": "application/json"},
+                json={
+                    "query": query_img,
+                    "numResults": 5,
+                    "type": "neural",
+                    "contents": {"text": {"maxCharacters": 100}},
+                },
+                timeout=30
+            )
+            results = r2.json().get("results", [])
+
+        # Intentar descargar la imagen de Open Graph de cada resultado
+        headers_browser = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        }
+
+        for result in results:
+            url_pagina = result.get("url", "")
+            if not url_pagina:
+                continue
+
+            try:
+                # Intentar obtener la imagen OG de la página
+                resp = requests.get(url_pagina, headers=headers_browser, timeout=15)
+                if resp.status_code != 200:
+                    continue
+
+                html = resp.text
+
+                # Buscar og:image en el HTML
+                import re
+                og_patterns = [
+                    r'<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']',
+                    r'<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']',
+                    r'<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']',
+                ]
+
+                img_url = None
+                for pattern in og_patterns:
+                    match = re.search(pattern, html, re.IGNORECASE)
+                    if match:
+                        img_url = match.group(1).strip()
+                        break
+
+                if not img_url:
+                    continue
+
+                # Asegurarse de que la URL es absoluta
+                if img_url.startswith('//'):
+                    img_url = 'https:' + img_url
+                elif img_url.startswith('/'):
+                    from urllib.parse import urlparse
+                    parsed = urlparse(url_pagina)
+                    img_url = f"{parsed.scheme}://{parsed.netloc}{img_url}"
+
+                # Verificar que parece una imagen real
+                if not any(ext in img_url.lower() for ext in ['.jpg', '.jpeg', '.png', '.webp']):
+                    if 'image' not in img_url.lower() and 'photo' not in img_url.lower() and 'media' not in img_url.lower():
+                        continue
+
+                print(f"  [Imagen] Descargando desde: {img_url[:80]}...")
+                img_resp = requests.get(img_url, headers=headers_browser, timeout=20)
+
+                if img_resp.status_code == 200 and len(img_resp.content) > 20000:
+                    # Verificar que es una imagen válida
+                    content_type = img_resp.headers.get('Content-Type', '')
+                    if 'image' in content_type or img_url.lower().endswith(('.jpg','.jpeg','.png','.webp')):
+                        print(f"  [Imagen] ✓ Imagen real encontrada: {len(img_resp.content)//1024}KB desde {url_pagina[:50]}")
+                        return img_resp.content
+
+            except Exception as e_inner:
+                print(f"  [Imagen] Error con {url_pagina[:40]}: {e_inner}")
+                continue
+
+        print(f"  [Imagen] No se encontró imagen real para: {titulo[:50]}")
+        return None
+
     except Exception as e:
-        print(f"  [Imagen] Error: {e}")
+        print(f"  [Imagen] Error general: {e}")
         return None
 
 def subir_imagen_wp(imagen_bytes, titulo, headers):
@@ -141,7 +241,7 @@ def publicar(a):
     # Generar imagen con IA
     media_id = None
     imagen_prompt = a.get("imagen_prompt") or a.get("titulo", "")
-    imagen_bytes = generar_imagen_ia(a.get("titulo", ""), imagen_prompt)
+    imagen_bytes = buscar_imagen_real(a.get("titulo", ""), imagen_prompt)
     if imagen_bytes:
         media_id = subir_imagen_wp(imagen_bytes, a.get("titulo", ""), h)
 
