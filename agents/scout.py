@@ -80,21 +80,68 @@ def save_published(hashes):
 def slug_hash(title):
     return hashlib.md5(title.lower().strip().encode()).hexdigest()[:12]
 
-def search_news(query, num=5):
+# Medios de referencia por audiencia y relevancia editorial (España + LATAM)
+MEDIOS_REFERENCIA = [
+    # España - mayor audiencia confirmada (GfK DAM)
+    "motorpasionmoto.com",   # líder absoluto de audiencia en España
+    "motosan.es",
+    "soymotero.net",
+    "lamoto.es",
+    "motociclismo.es",
+    "moto1pro.com",          # revista digital de referencia técnica
+    "motorbikemag.es",
+    "motofichas.com",
+    # Argentina
+    "lamoto.com.ar",         # referencia histórica, usada como benchmark de diseño
+    "motonews.com.ar",
+    "informoto.com",
+    "motorpress.com.ar",
+    # México
+    "revistamoto.com",       # la más grande de México
+    "motociclo.com.mx",
+    # Colombia
+    "demotos.com.co",
+    "bimotos.com",
+    "revistaautosmas.com",
+    # Internacional / técnico en inglés (para lanzamientos globales y MotoGP)
+    "motorcyclenews.com",
+    "cycleworld.com",
+    "visordown.com",
+]
+
+def search_news(query, num=5, usar_medios_referencia=True):
+    payload = {
+        "query": query,
+        "numResults": num,
+        "type": "neural",
+        "useAutoprompt": True,
+        "startPublishedDate": (datetime.utcnow() - timedelta(days=14)).strftime("%Y-%m-%dT00:00:00Z"),
+        "contents": {"text": {"maxCharacters": 800}},
+    }
+    if usar_medios_referencia:
+        payload["includeDomains"] = MEDIOS_REFERENCIA
+
     r = requests.post(
         "https://api.exa.ai/search",
         headers={"x-api-key": EXA_API_KEY, "Content-Type": "application/json"},
-        json={
-            "query": query,
-            "numResults": num,
-            "type": "neural",
-            "useAutoprompt": True,
-            "startPublishedDate": (datetime.utcnow() - timedelta(days=14)).strftime("%Y-%m-%dT00:00:00Z"),
-            "contents": {"text": {"maxCharacters": 800}},
-        },
+        json=payload,
     )
     r.raise_for_status()
-    return r.json().get("results", [])
+    results = r.json().get("results", [])
+
+    # Si la búsqueda restringida a medios de referencia no trae nada, reintentar sin restricción
+    if not results and usar_medios_referencia:
+        print(f"  [Scout] Sin resultados en medios de referencia para '{query[:40]}', ampliando búsqueda...")
+        payload.pop("includeDomains", None)
+        r2 = requests.post(
+            "https://api.exa.ai/search",
+            headers={"x-api-key": EXA_API_KEY, "Content-Type": "application/json"},
+            json=payload,
+        )
+        r2.raise_for_status()
+        results = r2.json().get("results", [])
+
+    return results
 
 def buscar_noticias(max_noticias=5):
     published = load_published()
