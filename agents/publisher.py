@@ -384,10 +384,23 @@ def publicar(a):
     cat = CATEGORIA_IDS.get(cat_nombre, 19)  # default: Reviews (ID 19)
     print(f"  [Publisher] Categoría: '{cat_nombre}' → ID {cat}")
 
-    # Programar para manana 17:00
-    now = datetime.now()
-    fecha_pub = (now + timedelta(days=1)).replace(hour=17, minute=0, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M:%S")
-    titulo_pub = a.get("seo_title") or a.get("titulo", "Sin titulo")
+    # Usar fecha programada del main.py (1 artículo por día) o fallback mañana 10:00 AR
+    fecha_programada = a.get("fecha_programada")
+    if not fecha_programada:
+        now = datetime.utcnow()
+        fecha_programada = (now + timedelta(days=1)).replace(
+            hour=13, minute=0, second=0, microsecond=0
+        ).strftime("%Y-%m-%dT%H:%M:%S")
+
+    titulo_pub = a.get("titulo", "Sin titulo")  # Título completo como H1
+    seo_title = a.get("seo_title") or titulo_pub  # SEO title para Yoast
+
+    # Autor ficticio: agregar meta de Yoast para SEO title y meta description
+    meta_yoast = {
+        "_yoast_wpseo_title": seo_title[:60],
+        "_yoast_wpseo_metadesc": a.get("meta_description", "")[:155],
+        "_yoast_wpseo_focuskw": (a.get("tags", [""])[0] if a.get("tags") else ""),
+    }
 
     p = {
         "title": titulo_pub,
@@ -395,7 +408,8 @@ def publicar(a):
         "excerpt": bajada,
         "slug": a.get("slug", ""),
         "status": "future",
-        "date": fecha_pub,
+        "date": fecha_programada,
+        "meta": meta_yoast,
         "tags": [t for t in tags if t],
         "categories": [cat] if cat else [],
     }
@@ -418,3 +432,121 @@ def publicar(a):
         return {"ok": True, "url": link, "id": post_id}
     print(f"  [Publisher] Error {r.status_code}: {r.text[:200]}")
     return {"ok": False, "error": r.text[:200]}
+
+
+def actualizar_home_portada():
+    """
+    Actualiza la página de portada (ID 141) con los últimos 3 posts
+    publicados/programados de cada categoría.
+    """
+    h = get_auth_header()
+    WP_API = f"{WP_URL}/wp-json/wp/v2"
+
+    CATEGORIAS = [
+        {"id": 19, "nombre": "Reviews",            "slug": "reviews"},
+        {"id": 15, "nombre": "Nuevos Lanzamientos","slug": "nuevos-lanzamientos"},
+        {"id": 9,  "nombre": "Competición",         "slug": "competicion"},
+        {"id": 46, "nombre": "Comparativas",        "slug": "comparativas"},
+    ]
+    HOME_PAGE_ID = 141
+
+    def get_posts_categoria(cat_id, num=3):
+        """Obtiene los últimos N posts (publish o future) de una categoría con su imagen."""
+        r = request_with_retry(
+            "GET",
+            f"{WP_API}/posts?categories={cat_id}&per_page={num}&status=publish,future&orderby=date&order=desc&_fields=id,title,excerpt,link,featured_media",
+            h
+        )
+        if not r:
+            return []
+        posts = r.json() if r.status_code == 200 else []
+        resultado = []
+        for p in posts:
+            img_url = ""
+            if p.get("featured_media"):
+                ri = request_with_retry("GET", f"{WP_API}/media/{p['featured_media']}?_fields=source_url", h)
+                if ri and ri.status_code == 200:
+                    img_url = ri.json().get("source_url", "")
+            resultado.append({
+                "title": p["title"]["rendered"],
+                "excerpt": p["excerpt"]["rendered"].replace("<p>","").replace("</p>","").strip()[:110],
+                "link": p["link"],
+                "img": img_url,
+            })
+        return resultado
+
+    def main_card(p):
+        img_html = f'<img src="{p["img"]}" alt="{p["title"]}" style="width:100%;height:260px;object-fit:cover;display:block;" loading="lazy"/>' if p["img"] else ''
+        return f"""<a href="{p['link']}" style="text-decoration:none;color:inherit;display:block;">
+  <div style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.10);">
+    {img_html}
+    <div style="padding:16px 18px;">
+      <h3 style="margin:0 0 8px;font-size:19px;line-height:1.3;color:#1A1A18;font-family:Oswald,sans-serif;font-weight:600;">{p['title']}</h3>
+      <p style="margin:0;font-size:13px;color:#666;line-height:1.5;">{p['excerpt']}...</p>
+    </div>
+  </div>
+</a>"""
+
+    def side_card(p):
+        onerr = "this.style.display='none'"
+        img_html = f'<img src="{p["img"]}" alt="{p["title"]}" style="width:100%;height:140px;object-fit:cover;display:block;" loading="lazy" onerror="{onerr}"/>' if p["img"] else ''
+        return f"""<a href="{p['link']}" style="text-decoration:none;color:inherit;display:block;">
+  <div style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.10);">
+    {img_html}
+    <div style="padding:12px 14px;">
+      <h3 style="margin:0 0 6px;font-size:14px;line-height:1.3;color:#1A1A18;font-family:Oswald,sans-serif;font-weight:600;">{p['title']}</h3>
+      <p style="margin:0;font-size:12px;color:#777;line-height:1.4;">{p['excerpt'][:90]}...</p>
+    </div>
+  </div>
+</a>"""
+
+    def build_section(cat, posts):
+        if not posts:
+            return f"""<section style="margin-bottom:48px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #E8541E;padding-bottom:10px;margin-bottom:20px;">
+    <h2 style="margin:0;font-size:24px;font-family:Oswald,sans-serif;text-transform:uppercase;color:#1A1A18;letter-spacing:.04em;">{cat['nombre']}</h2>
+    <a href="/category/{cat['slug']}/" style="font-size:11px;color:#E8541E;text-decoration:none;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">Ver todo &#8594;</a>
+  </div>
+  <div style="background:#fff;border-radius:8px;padding:32px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+    <p style="margin:0;font-size:15px;color:#888;font-family:Inter,sans-serif;">Próximamente: contenido de {cat['nombre'].lower()}.</p>
+  </div>
+</section>"""
+        
+        main_p = posts[0]
+        sides = posts[1:]
+        sides_html = "".join(f'<div style="margin-bottom:14px;">{side_card(p)}</div>' for p in sides)
+        grid_cols = "2fr 1fr" if sides else "1fr"
+
+        return f"""<section style="margin-bottom:48px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #E8541E;padding-bottom:10px;margin-bottom:20px;">
+    <h2 style="margin:0;font-size:24px;font-family:Oswald,sans-serif;text-transform:uppercase;color:#1A1A18;letter-spacing:.04em;">{cat['nombre']}</h2>
+    <a href="/category/{cat['slug']}/" style="font-size:11px;color:#E8541E;text-decoration:none;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">Ver todo &#8594;</a>
+  </div>
+  <div style="display:grid;grid-template-columns:{grid_cols};gap:20px;align-items:start;">
+    <div>{main_card(main_p)}</div>
+    {"<div>" + sides_html + "</div>" if sides else ""}
+  </div>
+</section>"""
+
+    # Construir el HTML completo
+    secciones_html = ""
+    for cat in CATEGORIAS:
+        print(f"  [Home] Cargando posts de {cat['nombre']}...")
+        posts = get_posts_categoria(cat["id"])
+        secciones_html += build_section(cat, posts)
+
+    html_portada = f"""<!-- wp:html -->
+<div style="max-width:1100px;margin:0 auto;padding:32px 20px;font-family:Inter,sans-serif;">
+{secciones_html}
+</div>
+<!-- /wp:html -->"""
+
+    # Actualizar la página de portada
+    r = request_with_retry("POST", f"{WP_API}/pages/{HOME_PAGE_ID}", h, {"content": html_portada})
+    if r and r.status_code == 200:
+        print(f"  [Home] ✓ Portada actualizada correctamente")
+        return True
+    else:
+        status = r.status_code if r else "sin respuesta"
+        print(f"  [Home] ✗ Error actualizando portada: {status}")
+        return False
