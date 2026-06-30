@@ -129,56 +129,150 @@ def buscar_video_youtube(titulo):
     return {"url": YOUTUBE_CHANNEL_URL, "titulo": "Isaias Rider - Canal de motos", "marca": marca_encontrada or ""}
 
 def generar_articulo(noticia, voz):
-    """Genera un articulo editorial extenso, con specs reales, conocimiento profundo e imagenes por seccion."""
+    """Genera un articulo editorial adaptando extensión y estructura según la categoría."""
 
-    prompt = f"""Sos {voz['nombre']}, periodista de motos que escribe para La Banda Motera desde {voz['ubicacion']}.
+    # --- Pre-detectar categoría probable para adaptar el prompt ---
+    titulo_lower = noticia['titulo'].lower()
+    resumen_lower = (noticia.get('resumen') or '').lower()
+
+    es_lanzamiento = any(k in titulo_lower + resumen_lower for k in [
+        'lanzamiento', 'presentacion', 'nueva moto', 'nuevo modelo', 'llega',
+        'precio', 'disponible', '2026', '2027', 'desvela', 'revela', 'confirma',
+        'launch', 'unveiled', 'revealed', 'announced', 'new model'
+    ])
+
+    es_competicion = any(k in titulo_lower + resumen_lower for k in [
+        'motogp', 'superbike', 'worldsbk', 'carrera', 'campeonato', 'podio',
+        'gp ', 'gran premio', 'dakar', 'enduro', 'rally', 'resultado',
+        'ganador', 'gana', 'wins', 'race', 'championship'
+    ])
+
+    # Prompt de LANZAMIENTO — corto, ficha técnica, mercados, fecha
+    if es_lanzamiento:
+        prompt = f"""Sos {voz['nombre']}, periodista de motos que escribe para La Banda Motera desde {voz['ubicacion']}.
 {voz['bio']}
 Dialecto: {voz['dialecto']}
 
-Escribi un articulo editorial EXTENSO, RICO y DETALLADO sobre la siguiente noticia de motos:
+Escribi una nota de lanzamiento CONCISA y DIRECTA sobre:
+
+TITULO: {noticia['titulo']}
+CONTEXTO: {noticia['resumen'][:400] if noticia.get('resumen') else 'Sin resumen'}
+URL: {noticia.get('url', '')}
+
+INSTRUCCIONES — NOTA DE LANZAMIENTO (400-600 palabras MÁXIMO):
+1. Abrí con 2-3 oraciones de contexto editorial: por qué importa esta moto en el mercado actual.
+2. Ficha técnica rápida: motor, potencia, torque, peso, altura de asiento, capacidad de tanque, precio (si se conoce).
+3. Mercados de lanzamiento: ¿dónde llega? ¿Argentina, España, México? ¿Cuándo?
+4. 1-2 párrafos de info complementaria: rival directo, posicionamiento, equipamiento destacado.
+5. Cierre con una línea de opinión editorial directa y clara.
+6. Usa máximo 2 subtítulos H2 (## en markdown).
+7. NO es una review, NO hay test, NO hay "sensaciones al manejarla". Es una nota de lanzamiento informativa con voz editorial.
+8. Usa el dialecto de tu perfil de forma natural.
+9. NUNCA copies el texto fuente — todo original desde tu conocimiento.
+
+FORMATO JSON exacto:
+{{
+  "titulo": "titulo SEO atractivo (máximo 65 caracteres)",
+  "bajada": "1-2 oraciones de gancho para el lector",
+  "contenido_md": "la nota completa en markdown, 400-600 palabras",
+  "seo_title": "titulo SEO (máximo 60 caracteres)",
+  "meta_description": "meta description (150-155 caracteres exactos)",
+  "slug": "url-amigable-sin-tildes-ni-espacios",
+  "categoria": "Nuevos Lanzamientos",
+  "tags": ["tag1", "tag2", "tag3"],
+  "imagen_prompt": "prompt fotografico en inglés para imagen de la moto",
+  "imagenes_secciones": []
+}}
+
+Responde SOLO el JSON, sin texto antes ni después, sin backticks."""
+
+    # Prompt de COMPETICIÓN — resultados, datos, contexto de campeonato
+    elif es_competicion:
+        prompt = f"""Sos {voz['nombre']}, periodista de motos que escribe para La Banda Motera desde {voz['ubicacion']}.
+{voz['bio']}
+Dialecto: {voz['dialecto']}
+
+Escribi una nota de competición DIRECTA Y DINÁMICA sobre:
+
+TITULO: {noticia['titulo']}
+CONTEXTO: {noticia['resumen'][:500] if noticia.get('resumen') else 'Sin resumen'}
+URL: {noticia.get('url', '')}
+
+INSTRUCCIONES — NOTA DE COMPETICIÓN (700-900 palabras):
+1. Abrí con el resultado central: quién ganó, en qué circuito, en qué campeonato.
+2. Desarrollá el relato de la carrera o evento: momentos clave, drama, batallas.
+3. Impacto en el campeonato: ¿cómo queda la tabla? ¿Qué significa para el título?
+4. Contexto de los protagonistas: resultados previos, situación en el campeonato.
+5. Párrafo de opinión editorial sobre lo que muestra esta carrera.
+6. Usá 3-4 subtítulos H2 para estructurar.
+7. Tono dinámico, como si contaras la carrera a alguien que no la vio.
+8. NUNCA inventes resultados — solo lo que esté en el contexto provisto.
+
+FORMATO JSON exacto:
+{{
+  "titulo": "titulo SEO atractivo (máximo 65 caracteres)",
+  "bajada": "1-2 oraciones de gancho",
+  "contenido_md": "la nota completa en markdown, 700-900 palabras",
+  "seo_title": "titulo SEO (máximo 60 caracteres)",
+  "meta_description": "meta description (150-155 caracteres exactos)",
+  "slug": "url-amigable-sin-tildes-ni-espacios",
+  "categoria": "Competición",
+  "tags": ["tag1", "tag2", "tag3"],
+  "imagen_prompt": "prompt fotografico en inglés",
+  "imagenes_secciones": [
+    {{"seccion": "titulo exacto H2", "busqueda": "descripcion imagen"}}
+  ]
+}}
+
+Responde SOLO el JSON, sin texto antes ni después, sin backticks."""
+
+    # Prompt de REVIEW / COMPARATIVA / MARCAS — extenso, profundo, ~2420 palabras
+    else:
+        prompt = f"""Sos {voz['nombre']}, periodista de motos que escribe para La Banda Motera desde {voz['ubicacion']}.
+{voz['bio']}
+Dialecto: {voz['dialecto']}
+
+Escribi un articulo editorial EXTENSO, RICO y DETALLADO sobre:
 
 TITULO DE REFERENCIA: {noticia['titulo']}
 FUENTE/CONTEXTO: {noticia['resumen'][:600] if noticia.get('resumen') else 'Sin resumen disponible'}
 URL FUENTE: {noticia.get('url', '')}
 
-INSTRUCCIONES CRITICAS:
-1. El articulo completo (titulo + bajada + firma + todos los subtitulos + cuerpo) debe tener aproximadamente 2.420 palabras. Esto es un piso, no un techo: preferi pasarte un poco a quedarte corto. Un articulo de 700-900 palabras NO es aceptable - tiene que sentirse como una nota de revista especializada, profunda y completa, no un resumen superficial.
-2. Para lograr esa extension, desarrolla en profundidad: contexto historico de la marca o el segmento, motor y prestaciones con detalle tecnico real, suspension y ciclistica, frenos y electronica, ergonomia, diseño y calidad percibida, comparacion con AL MENOS DOS rivales directos reales del mercado, precio y posicionamiento, y una conclusion editorial fuerte. Cada uno de estos bloques merece su propio subtitulo y al menos 150-200 palabras de desarrollo real, con datos, no relleno.
-3. El lector debe terminar sabiendo exactamente de que moto hablamos: motor, potencia, torque, tecnologia, precio aproximado si se conoce, puntos fuertes y debiles reales.
-4. Da tu opinion editorial fundamentada. No seas neutro ni tibio - tenes que tener una postura clara.
-5. Usa el dialecto de tu perfil de forma natural, sin exagerar.
-6. NUNCA menciones "segun la fuente" ni atribuyas texto a un periodista externo. Vos sos el unico autor.
-7. NUNCA copies texto de la fuente - todo es original, redactado desde tu conocimiento del tema.
-8. Estructura con subtitulos (usa ## para H2 en markdown). Necesitas minimo 7-8 subtitulos H2 para sostener la extension pedida.
-9. Incluye una seccion "Ficha tecnica rapida" con los datos clave en formato lista al final, antes de la conclusion.
-10. Termina con un parrafo de conclusion que sea opinion editorial fuerte.
+INSTRUCCIONES CRÍTICAS:
+1. ~2.420 palabras totales (título + bajada + firma + subtítulos + cuerpo). Piso, no techo.
+2. Desarrollá en profundidad: contexto histórico de la marca/segmento, motor y prestaciones con detalle técnico real, suspensión y ciclística, frenos y electrónica, ergonomía, diseño y calidad percibida, comparación con AL MENOS DOS rivales directos reales, precio y posicionamiento, conclusión editorial fuerte.
+3. Cada bloque merece su H2 y al menos 150-200 palabras de desarrollo real con datos.
+4. El lector termina sabiendo exactamente: motor, potencia, torque, tecnología, precio aproximado, puntos fuertes y débiles.
+5. Opinión editorial fundamentada. No seas neutro.
+6. Dialecto natural del perfil, sin exagerar.
+7. NUNCA menciones "según la fuente" ni copies texto fuente.
+8. Mínimo 7-8 H2. Incluye sección "Ficha técnica rápida" antes de la conclusión.
 
-IMAGENES POR SECCION - CRITICO:
-Ademas del contenido, tenes que identificar EXACTAMENTE en que puntos del articulo deberia ir una imagen de apoyo, y describir esa imagen. No alcanza con una sola imagen para todo el articulo: necesitamos entre 4 y 6 imagenes distribuidas en los puntos mas relevantes (ej: una imagen general de la moto al inicio, una del motor o detalle tecnico cuando se habla de motor/suspension/frenos, una del contexto historico de la marca si se menciona, una de la moto en accion o en uso real, una del rival comparado si aplica, una del tablero/cockpit si se describe tecnologia).
+IMÁGENES POR SECCIÓN: entre 4 y 6 imágenes distribuidas. Para cada una:
+- "seccion": título EXACTO del H2 donde va (debe coincidir letra por letra)
+- "busqueda": descripción corta en español para buscar en páginas oficiales o revistas
 
-Para cada imagen necesaria, indica:
-- "seccion": el titulo EXACTO del H2 despues del cual debe insertarse esa imagen (debe coincidir letra por letra con un H2 que aparece en tu contenido_md)
-- "busqueda": una descripcion corta en español de que imagen se necesita, pensada para buscarla en paginas oficiales de marcas o revistas especializadas (ej: "Ducati Hypermotard V2 SP vista lateral estudio", "motor bicilindrico KTM 790 detalle", "Yamaha MT-07 2026 rival comparacion")
-
-FORMATO DE RESPUESTA - JSON con esta estructura exacta:
+FORMATO JSON exacto:
 {{
-  "titulo": "titulo SEO atractivo (maximo 65 caracteres)",
-  "bajada": "primer parrafo de gancho (2-3 oraciones que enganchen al lector)",
-  "contenido_md": "el articulo completo en markdown (sin el titulo ni la bajada que ya van aparte), con minimo 7-8 H2, apuntando a 2420 palabras totales sumando todo el articulo",
-  "seo_title": "titulo para SEO (maximo 60 caracteres)",
+  "titulo": "titulo SEO atractivo (máximo 65 caracteres)",
+  "bajada": "gancho de 2-3 oraciones",
+  "contenido_md": "artículo completo en markdown, mínimo 7-8 H2, ~2420 palabras",
+  "seo_title": "titulo SEO (máximo 60 caracteres)",
   "meta_description": "meta description (150-155 caracteres exactos)",
   "slug": "url-amigable-sin-tildes-ni-espacios",
-  "categoria": "una de: Competición | Reviews | Nuevos Lanzamientos | Marcas | Comparativas | Historias Moteras",
+  "categoria": "una de: Reviews | Comparativas | Marcas | Historias Moteras",
   "tags": ["tag1", "tag2", "tag3", "tag4"],
-  "imagen_prompt": "prompt fotografico en ingles de la imagen principal/destacada: marca modelo año, tipo de moto, colores, fondo neutro, sin personas, alta calidad fotografica, photorealistic",
+  "imagen_prompt": "prompt fotografico en inglés para imagen destacada",
   "imagenes_secciones": [
-    {{"seccion": "titulo exacto del H2", "busqueda": "descripcion corta de la imagen necesaria"}},
-    {{"seccion": "titulo exacto de otro H2", "busqueda": "descripcion corta de otra imagen necesaria"}}
+    {{"seccion": "titulo exacto H2", "busqueda": "descripcion imagen"}}
   ]
 }}
 
-Responde SOLO el JSON, sin texto antes ni despues, sin backticks."""
+Responde SOLO el JSON, sin texto antes ni después, sin backticks."""
 
+
+    # Tokens adaptados por tipo: lanzamiento=2000, competicion=4000, review=8000
+    max_tok = 2000 if es_lanzamiento else (4000 if es_competicion else 8000)
     r = requests.post(
         "https://api.anthropic.com/v1/messages",
         headers={
@@ -188,7 +282,7 @@ Responde SOLO el JSON, sin texto antes ni despues, sin backticks."""
         },
         json={
             "model": "claude-sonnet-4-6",
-            "max_tokens": 8000,
+            "max_tokens": max_tok,
             "messages": [{"role": "user", "content": prompt}],
         },
     )
