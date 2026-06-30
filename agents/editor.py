@@ -38,19 +38,85 @@ VOCES = {
     },
 }
 
-# Orden fijo de rotación de voces por corrida
-ORDEN_VOCES = ["AR", "ES", "MX", "CO"]
+# Señales geográficas por zona
+SEÑALES_AR = [
+    # Países
+    "argentina", "argentino", "argentina", "buenos aires", "cordoba", "rosario",
+    "mendoza", "tucuman", "salta", "montevideo", "uruguay", "paraguay", "chile",
+    "bolivia", "peru", "ecuador", "cono sur", "latam", "latinoamerica",
+    # Marcas locales
+    "keller", "gilera", "zanella", "motomel", "corven", "mondial", "beta ar",
+    "bajaj argentina", "rouser", "pulsar",
+    # Medios
+    "lamoto.com.ar", "motonews.com.ar", "informoto.com",
+    # Eventos
+    "rally dakar", "tc2000 motos", "superbike argentina",
+]
 
-def elegir_voz(titulo, url="", indice_articulo=0):
+SEÑALES_ES = [
+    # Países
+    "españa", "espana", "madrid", "barcelona", "valencia", "sevilla",
+    "iberia", "peninsula", "espanol",
+    # Marcas españolas
+    "rieju", "derbi", "gas gas", "gasgas", "bultaco",
+    # Medios
+    "motorpasionmoto.com", "motosan.es", "soymotero.net", "motociclismo.es",
+    "moto1pro.com",
+    # Competición europea
+    "motogp", "superbike worldsbk", "moto2", "moto3", "campeonato mundial",
+    "gran premio de", "gp de aragon", "gp de jerez", "gp de catalunya",
+    "rally dakar",  # Dakar tiene mucha presencia española
+    "eicma", "intermot",
+]
+
+SEÑALES_MX = [
+    # Países
+    "mexico", "méxico", "cdmx", "ciudad de mexico", "guadalajara", "monterrey",
+    "jalisco", "nuevo leon",
+    # Marcas locales MX
+    "italika", "vento", "carabela", "dinamo", "vorago",
+    # Medios
+    "revistamoto.com", "motociclo.com.mx",
+]
+
+SEÑALES_CO = [
+    # Países
+    "colombia", "bogota", "medellin", "cali", "barranquilla",
+    "venezuela", "panama", "costa rica", "centroamerica",
+    # Marcas
+    "akt", "auteco", "hero",
+    # Medios
+    "demotos.com.co", "bimotos.com",
+]
+
+def elegir_voz(titulo, url="", resumen="", indice_articulo=0):
     """
-    Asigna voz rotando garantizando que cada corrida use las 4 voces.
-    - El indice_articulo determina qué voz le toca (0→AR, 1→ES, 2→MX, 3→CO).
-    - Si hay más de 4 artículos, vuelve a empezar.
-    - Si el tema tiene señal MUY fuerte de mercado específico y coincide con la voz
-      asignada por rotación, se mantiene. Si no, prevalece la rotación.
+    Asigna la voz según la zona geográfica del contenido.
+    - Si el artículo es claramente de una región → voz de esa región.
+    - Si es internacional/ambiguo → rotación basada en índice para garantizar variedad.
     """
-    voz_rotacion = VOCES[ORDEN_VOCES[indice_articulo % len(ORDEN_VOCES)]]
-    return voz_rotacion
+    text = (titulo + " " + url + " " + resumen).lower()
+
+    # Contar señales por zona
+    score_ar = sum(1 for s in SEÑALES_AR if s in text)
+    score_es = sum(1 for s in SEÑALES_ES if s in text)
+    score_mx = sum(1 for s in SEÑALES_MX if s in text)
+    score_co = sum(1 for s in SEÑALES_CO if s in text)
+
+    scores = {"AR": score_ar, "ES": score_es, "MX": score_mx, "CO": score_co}
+    max_score = max(scores.values())
+
+    # Si hay señal clara (≥1 match), usar la voz de esa zona
+    if max_score >= 1:
+        ganadora = max(scores, key=scores.get)
+        print(f"  [Editor] Voz asignada por región: {ganadora} (scores: {scores})")
+        return VOCES[ganadora]
+
+    # Sin señal clara → rotación por índice para garantizar variedad en artículos internacionales
+    orden = ["AR", "ES", "MX", "CO"]
+    fallback = orden[indice_articulo % len(orden)]
+    print(f"  [Editor] Voz por rotación (sin señal regional): {fallback}")
+    return VOCES[fallback]
 
 def buscar_imagen_moto(titulo):
     """Busca una imagen relevante de la moto usando Exa."""
@@ -226,6 +292,54 @@ FORMATO JSON exacto:
 
 Responde SOLO el JSON, sin texto antes ni después, sin backticks."""
 
+    # Detectar si es Historias Moteras
+    es_historia = any(k in titulo_lower + resumen_lower for k in [
+        'historia', 'historico', 'icono', 'iconica', 'legendario', 'clasico',
+        'cultura', 'motera', 'motero', 'origenes', 'fundacion', 'nacio',
+        'personaje', 'piloto legendario', 'marca historica', 'moto clasica',
+        'cafe racer', 'scrambler historia', 'custom historia', 'born to ride',
+        'comunidad', 'estilo de vida', 'lifestyle moto',
+    ])
+
+    # Prompt de HISTORIAS MOTERAS — narrativo, cultural, evocador
+    if es_historia and not es_lanzamiento and not es_competicion:
+        prompt = f"""Sos {voz['nombre']}, periodista de motos que escribe para La Banda Motera desde {voz['ubicacion']}.
+{voz['bio']}
+Dialecto: {voz['dialecto']}
+
+Escribi un artículo de CULTURA E HISTORIA MOTERA, narrativo y evocador, sobre:
+
+TITULO: {noticia['titulo']}
+CONTEXTO: {noticia['resumen'][:500] if noticia.get('resumen') else 'Sin resumen'}
+URL: {noticia.get('url', '')}
+
+INSTRUCCIONES — HISTORIA/CULTURA MOTERA (1200-1600 palabras):
+1. Tono narrativo, evocador, casi literario. Como si contaras una historia alrededor del fuego.
+2. Contexto histórico rico: fechas, personajes, hitos técnicos o culturales.
+3. Conectá el pasado con el presente: ¿por qué importa esto hoy?
+4. Si es sobre una moto icónica: motor, diseño, por qué marcó una época, quiénes la pilotaron.
+5. Si es sobre una marca: sus orígenes, fundadores, filosofía, modelos que la definieron.
+6. Si es sobre cultura/personajes: el impacto en la comunidad motera, anécdotas, legado.
+7. Opinión editorial al final: qué nos deja este pedazo de historia.
+8. 4-5 H2 para estructurar. Tono más pausado y reflexivo que una nota de lanzamiento.
+9. NUNCA copies texto fuente. Todo original desde tu conocimiento.
+
+FORMATO JSON exacto:
+{{
+  "titulo": "titulo SEO atractivo (máximo 65 caracteres)",
+  "bajada": "1-2 oraciones evocadoras de gancho",
+  "contenido_md": "el artículo completo en markdown, 1200-1600 palabras, 4-5 H2",
+  "seo_title": "titulo SEO (máximo 60 caracteres)",
+  "meta_description": "meta description (150-155 caracteres exactos)",
+  "slug": "url-amigable-sin-tildes-ni-espacios",
+  "categoria": "Historias Moteras",
+  "tags": ["tag1", "tag2", "tag3"],
+  "imagen_prompt": "prompt fotografico en inglés para imagen evocadora",
+  "imagenes_secciones": []
+}}
+
+Responde SOLO el JSON, sin texto antes ni después, sin backticks."""
+
     # Prompt de REVIEW / COMPARATIVA / MARCAS — extenso, profundo, ~2420 palabras
     else:
         prompt = f"""Sos {voz['nombre']}, periodista de motos que escribe para La Banda Motera desde {voz['ubicacion']}.
@@ -302,11 +416,14 @@ def editar_noticias(noticias):
     for i, n in enumerate(noticias, 1):
         print(f"  -> Articulo {i}/{len(noticias)}: {n['titulo'][:60]}...")
         try:
-            voz = elegir_voz(n["titulo"], n.get("url", ""), indice_articulo=i-1)
+            voz = elegir_voz(n["titulo"], n.get("url", ""), resumen=n.get("resumen", ""), indice_articulo=i-1)
             art = generar_articulo(n, voz)
 
             # Enriquecer con metadata
             art["autor"] = voz["nombre"]
+            # Agregar firma visible al inicio del contenido_md
+            firma = f"*Por {voz['nombre']} — La Banda Motera*\n\n"
+            art["contenido_md"] = firma + art.get("contenido_md", "")
             art["titulo_original"] = n["titulo"]
             art["url_fuente"] = n.get("url", "")
 
