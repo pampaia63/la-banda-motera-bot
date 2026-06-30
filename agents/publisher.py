@@ -185,6 +185,70 @@ def buscar_imagen_real(titulo, imagen_prompt=None):
         print(f"  [Imagen] Error general: {e}")
         return None
 
+def insertar_imagenes_en_secciones(html_contenido, imagenes_secciones, headers):
+    """
+    Busca una imagen real para cada seccion indicada por el editor,
+    la sube a WP y la inserta como <figure> despues del H2 correspondiente.
+    """
+    if not imagenes_secciones:
+        return html_contenido
+
+    import re as re_module
+
+    for img_spec in imagenes_secciones:
+        seccion_titulo = img_spec.get("seccion", "").strip()
+        busqueda = img_spec.get("busqueda", "")
+        if not seccion_titulo or not busqueda:
+            continue
+
+        try:
+            # Buscar la imagen real para esta seccion especifica
+            imagen_bytes = buscar_imagen_real(busqueda, busqueda)
+            if not imagen_bytes:
+                print(f"  [Imagen seccion] Sin imagen para: {seccion_titulo[:40]}")
+                continue
+
+            media_id = subir_imagen_wp(imagen_bytes, f"{seccion_titulo}-{busqueda[:30]}", headers)
+            if not media_id:
+                continue
+
+            # Obtener la URL de la imagen recien subida
+            media_resp = session.get(f"{WP_URL}/wp-json/wp/v2/media/{media_id}", headers=headers, timeout=15)
+            img_url = media_resp.json().get("source_url", "") if media_resp.status_code == 200 else ""
+            if not img_url:
+                continue
+
+            figure_html = f'<figure style="margin:24px 0;"><img src="{img_url}" alt="{seccion_titulo}" style="width:100%;border-radius:6px;" loading="lazy"/></figure>'
+
+            # Buscar el H2 exacto (o el mas parecido) en el HTML y insertar la imagen justo despues de su parrafo siguiente
+            # El H2 en HTML viene como <h2 id="...">Texto</h2> tras la conversion de markdown2
+            pattern = re_module.compile(
+                r'(<h2[^>]*>\s*' + re_module.escape(seccion_titulo) + r'\s*</h2>\s*<p>.*?</p>)',
+                re_module.IGNORECASE | re_module.DOTALL
+            )
+            match = pattern.search(html_contenido)
+            if match:
+                html_contenido = html_contenido[:match.end()] + figure_html + html_contenido[match.end():]
+                print(f"  [Imagen seccion] ✓ Insertada en: {seccion_titulo[:40]}")
+            else:
+                # Fallback: insertar justo despues del H2 si no se encontro el patron con parrafo
+                pattern_simple = re_module.compile(
+                    r'(<h2[^>]*>\s*' + re_module.escape(seccion_titulo) + r'\s*</h2>)',
+                    re_module.IGNORECASE
+                )
+                match2 = pattern_simple.search(html_contenido)
+                if match2:
+                    html_contenido = html_contenido[:match2.end()] + figure_html + html_contenido[match2.end():]
+                    print(f"  [Imagen seccion] ✓ Insertada (fallback) en: {seccion_titulo[:40]}")
+                else:
+                    print(f"  [Imagen seccion] ✗ No se encontro el H2: {seccion_titulo[:40]}")
+
+        except Exception as e:
+            print(f"  [Imagen seccion] Error procesando '{seccion_titulo[:30]}': {e}")
+            continue
+
+    return html_contenido
+
 def subir_imagen_wp(imagen_bytes, titulo, headers):
     """
     Sube la imagen a la Media Library de WordPress y devuelve el media ID.
@@ -249,6 +313,13 @@ def publicar(a):
     contenido_md = a.get("contenido_md", "")
     yt_block = build_youtube_block(a.get("youtube"))
     html_contenido = markdown2.markdown(contenido_md, extras=["fenced-code-blocks", "tables", "header-ids"])
+
+    # Insertar imagenes reales en cada seccion indicada por el editor
+    imagenes_secciones = a.get("imagenes_secciones", [])
+    if imagenes_secciones:
+        print(f"  [Publisher] Insertando {len(imagenes_secciones)} imagenes de seccion...")
+        html_contenido = insertar_imagenes_en_secciones(html_contenido, imagenes_secciones, h)
+
     html_final = html_contenido + yt_block
     bajada = a.get("bajada", "")
 
