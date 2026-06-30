@@ -136,9 +136,10 @@ def buscar_imagen_real(titulo, imagen_prompt=None):
                 # Buscar og:image en el HTML
                 import re
                 og_patterns = [
-                    r'<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']',
-                    r'<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']',
-                    r'<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']',
+                    r'<meta[^>]+property="og:image"[^>]+content="([^"]+)"',
+                    r"<meta[^>]+property='og:image'[^>]+content='([^']+)'",
+                    r'<meta[^>]+content="([^"]+)"[^>]+property="og:image"',
+                    r'<meta[^>]+name="twitter:image"[^>]+content="([^"]+)"',
                 ]
 
                 img_url = None
