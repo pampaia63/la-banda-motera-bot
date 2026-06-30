@@ -38,16 +38,19 @@ VOCES = {
     },
 }
 
-def elegir_voz(titulo, url=""):
-    """Asigna una voz segun palabras clave del tema."""
-    text = (titulo + " " + url).lower()
-    if any(k in text for k in ["espana", "madrid", "barcelona", "espanol", "iberia", "euro"]):
-        return VOCES["ES"]
-    if any(k in text for k in ["mexico", "cdmx", "italika", "vento", "carabela", "jalisco"]):
-        return VOCES["MX"]
-    if any(k in text for k in ["colombia", "bogota", "peru", "ecuador", "bolivia", "akt"]):
-        return VOCES["CO"]
-    return VOCES["AR"]  # default: Mateo Quiroga para todo LATAM generico
+# Orden fijo de rotación de voces por corrida
+ORDEN_VOCES = ["AR", "ES", "MX", "CO"]
+
+def elegir_voz(titulo, url="", indice_articulo=0):
+    """
+    Asigna voz rotando garantizando que cada corrida use las 4 voces.
+    - El indice_articulo determina qué voz le toca (0→AR, 1→ES, 2→MX, 3→CO).
+    - Si hay más de 4 artículos, vuelve a empezar.
+    - Si el tema tiene señal MUY fuerte de mercado específico y coincide con la voz
+      asignada por rotación, se mantiene. Si no, prevalece la rotación.
+    """
+    voz_rotacion = VOCES[ORDEN_VOCES[indice_articulo % len(ORDEN_VOCES)]]
+    return voz_rotacion
 
 def buscar_imagen_moto(titulo):
     """Busca una imagen relevante de la moto usando Exa."""
@@ -205,7 +208,7 @@ def editar_noticias(noticias):
     for i, n in enumerate(noticias, 1):
         print(f"  -> Articulo {i}/{len(noticias)}: {n['titulo'][:60]}...")
         try:
-            voz = elegir_voz(n["titulo"], n.get("url", ""))
+            voz = elegir_voz(n["titulo"], n.get("url", ""), indice_articulo=i-1)
             art = generar_articulo(n, voz)
 
             # Enriquecer con metadata
