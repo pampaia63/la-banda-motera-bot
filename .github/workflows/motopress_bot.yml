@@ -1,10 +1,8 @@
 name: La Banda Motera Bot - Generador Automatico
 
-# CRON PAUSADO - reactivar cuando haya hosting pago configurado
-# Para reactivar: descomentar las 2 lineas de schedule/cron de abajo
 on:
-  # schedule:
-  #   - cron: '0 6,12,18,0 * * *'
+  schedule:
+    - cron: '0 13 * * *'  # 10:00 AM Argentina (UTC-3) todos los dias
   workflow_dispatch:
     inputs:
       dry_run:
