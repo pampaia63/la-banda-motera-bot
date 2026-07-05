@@ -225,7 +225,7 @@ TITULO: {noticia['titulo']}
 CONTEXTO: {noticia['resumen'][:400] if noticia.get('resumen') else 'Sin resumen'}
 URL: {noticia.get('url', '')}
 
-INSTRUCCIONES — NOTA DE LANZAMIENTO (mínimo 1000 palabras):
+INSTRUCCIONES — NOTA DE LANZAMIENTO (máximo 600 palabras):
 1. Abrí con 2-3 oraciones de contexto editorial: por qué importa esta moto en el mercado actual.
 2. Contexto del segmento: qué lugar ocupa esta moto en el mercado, cómo llegó la marca hasta acá, qué vacío viene a llenar.
 3. Ficha técnica COMPLETA y detallada: motor, potencia, torque, cilindrada, refrigeración, caja de cambios, peso, altura de asiento, capacidad de tanque, neumáticos, frenos, suspensiones, electrónica.
@@ -238,7 +238,7 @@ INSTRUCCIONES — NOTA DE LANZAMIENTO (mínimo 1000 palabras):
 10. NO es una review de manejo, pero sí un análisis editorial profundo basado en specs y contexto de mercado.
 11. Usá el dialecto de tu perfil de forma natural.
 12. NUNCA copies el texto fuente — todo original desde tu conocimiento.
-IMPORTANTE: El artículo completo debe tener MÍNIMO 1000 palabras. Contá bien antes de terminar.
+IMPORTANTE: El artículo debe ser conciso y directo, máximo 600 palabras. Priorizá datos concretos sobre relleno.
 
 FORMATO JSON exacto:
 {{
