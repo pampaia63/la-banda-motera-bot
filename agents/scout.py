@@ -30,7 +30,18 @@ QUERIES = [
     # --- REVIEWS Y COMPARATIVAS ---
     "review prueba test moto trail adventure naked 2025 2026",
     "comparativa moto mediana cilindrada trail adventure 2026",
-    # --- MECÁNICA Y TECNOLOGÍA MOTO ---
+    # --- MECÁNICA Y TECNOLOGÍA MOTO (búsqueda evergreen, sin límite de fecha) ---
+    # Estas queries se procesan por separado en buscar_noticias()
+    # --- HISTORIAS MOTERAS Y CULTURA ---
+    "historia moto iconica clasica legendaria marca motocicleta",
+    "cultura motera cafe racer scrambler custom historia origen",
+    "piloto moto legendario historia campeonato icono",
+    "moto electrica 2026 novedad autonomia precio España Argentina",
+]
+
+# Queries de MECÁNICA — búsqueda evergreen (sin restricción de fecha ni dominio)
+# Se procesan aparte para no penalizar el score de noticias recientes
+QUERIES_MECANICA = [
     "sistema desmodromic ducati como funciona valvulas moto",
     "telelever duolever bmw suspension delantera moto explicacion",
     "motor boxer bmw refrigeracion aire cilindros opuestos moto",
@@ -43,11 +54,6 @@ QUERIES = [
     "quickshifter autoblipper moto como funciona cambio sin embrague",
     "chasis perimetral tubular moto diferencias rigidez torsion",
     "sistema refrigeracion liquida aire moto explicacion comparativa",
-    # --- HISTORIAS MOTERAS Y CULTURA ---
-    "historia moto iconica clasica legendaria marca motocicleta",
-    "cultura motera cafe racer scrambler custom historia origen",
-    "piloto moto legendario historia campeonato icono",
-    "moto electrica 2026 novedad autonomia precio España Argentina",
 ]
 
 # Marcas SIN presencia en LATAM ni España — excluir sus noticias
@@ -222,16 +228,19 @@ MEDIOS_REFERENCIA = [
     "visordown.com",
 ]
 
-def search_news(query, num=5, usar_medios_referencia=True):
+def search_news(query, num=5, usar_medios_referencia=True, sin_fecha_limite=False):
     payload = {
         "query": query,
         "numResults": num,
         "type": "neural",
         "useAutoprompt": True,
-        "startPublishedDate": (datetime.utcnow() - timedelta(days=14)).strftime("%Y-%m-%dT00:00:00Z"),
         "contents": {"text": {"maxCharacters": 800}},
     }
-    if usar_medios_referencia:
+    # Noticias normales: solo últimos 14 días
+    # Mecánica/historia: evergreen, sin límite de fecha
+    if not sin_fecha_limite:
+        payload["startPublishedDate"] = (datetime.utcnow() - timedelta(days=14)).strftime("%Y-%m-%dT00:00:00Z")
+    if usar_medios_referencia and not sin_fecha_limite:
         payload["includeDomains"] = MEDIOS_REFERENCIA
 
     r = requests.post(
@@ -261,6 +270,7 @@ def buscar_noticias(max_noticias=5):
     candidatos = []
     seen_hashes = set(published)
 
+    # 1. Buscar noticias recientes (últimos 14 días, medios de referencia)
     for q in QUERIES:
         try:
             results = search_news(q, num=4)
@@ -306,6 +316,43 @@ def buscar_noticias(max_noticias=5):
                 })
         except Exception as e:
             print(f"  [Scout] Error en query '{q}': {e}")
+            continue
+
+    # 2. Buscar contenido de mecánica (evergreen, sin límite de fecha)
+    # Si ya tenemos suficientes candidatos recientes, tomar solo 1 de mecánica
+    # para garantizar diversidad de tipos de artículo
+    slots_mecanica = max(1, max_noticias - len(candidatos))
+    for q in QUERIES_MECANICA:
+        if slots_mecanica <= 0:
+            break
+        try:
+            results = search_news(q, num=3, usar_medios_referencia=False, sin_fecha_limite=True)
+            for item in results:
+                title = item.get("title", "").strip()
+                url = item.get("url", "")
+                text = item.get("text", "")
+                if not title or len(title) < 10:
+                    continue
+                h = slug_hash(title)
+                if h in seen_hashes:
+                    continue
+                es_duplicado = any(titulo_similar(title, c["titulo"]) for c in candidatos)
+                if es_duplicado:
+                    continue
+                seen_hashes.add(h)
+                relevancia = calcular_relevancia(title, url, text) + 2  # bonus para garantizar inclusión
+                candidatos.append({
+                    "titulo": title,
+                    "url": url,
+                    "resumen": text[:500] if text else "",
+                    "hash": h,
+                    "relevancia": relevancia,
+                    "tipo": "mecanica",
+                })
+                slots_mecanica -= 1
+                break  # una por query es suficiente
+        except Exception as e:
+            print(f"  [Scout] Error en query mecánica '{q}': {e}")
             continue
 
     # Ordenar por relevancia descendente antes de tomar los primeros N
