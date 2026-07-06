@@ -447,11 +447,11 @@ def actualizar_home_portada():
 
     CATEGORIAS = [
         {"id": 10, "nombre": "Reviews",            "slug": "reviews"},
-        {"id": 15, "nombre": "Nuevos Lanzamientos","slug": "nuevos-lanzamientos"},
-        {"id": 9,  "nombre": "Competición",         "slug": "competicion"},
-        {"id": 46, "nombre": "Comparativas",        "slug": "comparativas"},
+        {"id": 11, "nombre": "Nuevos Lanzamientos","slug": "nuevos-lanzamientos"},
+        {"id": 14, "nombre": "Comparativas",       "slug": "comparativas"},
+        {"id": 56, "nombre": "Mecánica",           "slug": "mecanica"},
     ]
-    HOME_PAGE_ID = 141
+    HOME_PAGE_ID = 20
 
     def get_posts_categoria(cat_id, num=3):
         """Obtiene los últimos N posts (publish o future) de una categoría con su imagen."""
