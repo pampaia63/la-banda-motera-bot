@@ -258,7 +258,12 @@ MEDIOS_REFERENCIA = [
     "visordown.com",
 ]
 
-def search_news(query, num=5, usar_medios_referencia=True, sin_fecha_limite=False):
+def search_news(query, num=5, usar_medios_referencia=False, sin_fecha_limite=False):
+    """
+    Busca noticias via Exa API.
+    Por defecto busca en toda la web (sin restricción de dominio) para maximizar resultados.
+    usar_medios_referencia=True solo se usa si explícitamente se pide.
+    """
     payload = {
         "query": query,
         "numResults": num,
@@ -266,10 +271,11 @@ def search_news(query, num=5, usar_medios_referencia=True, sin_fecha_limite=Fals
         "useAutoprompt": True,
         "contents": {"text": {"maxCharacters": 800}},
     }
-    # Noticias generales y lanzamientos: últimos 90 días (permite cubrir lanzamientos de 1-2 meses atrás)
-    # Mecánica/historia: evergreen, sin límite de fecha
+    # Lanzamientos y noticias: últimos 90 días (cubre 1-2 meses de historia)
+    # Mecánica/cultura: evergreen, sin límite de fecha
     if not sin_fecha_limite:
         payload["startPublishedDate"] = (datetime.utcnow() - timedelta(days=90)).strftime("%Y-%m-%dT00:00:00Z")
+    # Solo restringir dominios si explícitamente se pide Y hay fecha límite
     if usar_medios_referencia and not sin_fecha_limite:
         payload["includeDomains"] = MEDIOS_REFERENCIA
 
@@ -303,7 +309,7 @@ def buscar_noticias(max_noticias=5):
     # 1. Buscar noticias recientes (últimos 14 días, medios de referencia)
     for q in QUERIES:
         try:
-            results = search_news(q, num=6)
+            results = search_news(q, num=6, usar_medios_referencia=False)
             for item in results:
                 title = item.get("title", "").strip()
                 url = item.get("url", "")
