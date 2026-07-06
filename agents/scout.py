@@ -30,11 +30,19 @@ QUERIES = [
     # --- REVIEWS Y COMPARATIVAS ---
     "review prueba test moto trail adventure naked 2025 2026",
     "comparativa moto mediana cilindrada trail adventure 2026",
-    # --- COMPETICIÓN pan-hispana ---
-    "MotoGP Moto2 Moto3 carrera resultado gran premio 2025 2026",
-    "Superbike WorldSBK carrera resultado campeonato 2025",
-    "Rally Dakar motos resultado etapa 2025 2026",
-    "superbike argentina enduro argentina motocross latam 2026",
+    # --- MECÁNICA Y TECNOLOGÍA MOTO ---
+    "sistema desmodromic ducati como funciona valvulas moto",
+    "telelever duolever bmw suspension delantera moto explicacion",
+    "motor boxer bmw refrigeracion aire cilindros opuestos moto",
+    "transmision cardan cadena correa moto diferencias ventajas",
+    "frenos abs moto como funciona cornering abs curvas",
+    "control traccion moto tcs funcionamiento antibloqueo",
+    "horquilla invertida telescopica diferencias suspension moto",
+    "motor v twin paralelo cilindros moto diferencias caracter",
+    "inyeccion electronica carburador moto historia evolucion",
+    "quickshifter autoblipper moto como funciona cambio sin embrague",
+    "chasis perimetral tubular moto diferencias rigidez torsion",
+    "sistema refrigeracion liquida aire moto explicacion comparativa",
     # --- HISTORIAS MOTERAS Y CULTURA ---
     "historia moto iconica clasica legendaria marca motocicleta",
     "cultura motera cafe racer scrambler custom historia origen",
@@ -76,11 +84,13 @@ AUTO_KEYWORDS = [
     "hibrido enchufable coche", "vehiculo electrico cuatro ruedas",
 ]
 
-# Palabras que indican noticias de motos irrelevantes para nuestros mercados
+# Palabras que indican noticias completamente fuera del foco editorial
 IRRELEVANT_KEYWORDS = [
     "australian superbike", "british superbike", "bsb",
     "enduro australia", "enduro usa", "american flat track",
-    "prix de france", "isle of man tt",  # competiciones muy locales
+    "prix de france", "isle of man tt",
+    "motogp carrera resultado", "superbike resultado carrera",
+    "rally dakar etapa resultado",  # resultados de carrera — no cubre el bot
 ]
 
 def is_moto_content(title, url=""):
@@ -123,7 +133,9 @@ def calcular_relevancia(title, url="", resumen=""):
         "lanzamiento", "precio", "disponible", "llega",
         "trail", "adventure", "naked", "enduro", "scrambler",
         "review", "prueba", "test", "comparativa",
-        "motogp", "superbike", "campeonato"
+        "mecanica", "tecnica", "como funciona", "sistema",
+        "desmodromic", "telelever", "suspension", "frenos abs",
+        "historia", "cultura", "icono", "clasico", "origen"
     ]
     for kw in keywords_positivos:
         if kw in text:
