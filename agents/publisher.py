@@ -362,26 +362,29 @@ def publicar(a):
     # Tags y categoria
     tags = [get_or_create(t, h, "tags") for t in a.get("tags", [])]
     # Mapa de categorías: nombre (viejo o nuevo) → ID real en WordPress
+    # IDs reales del WordPress de La Banda Motera (verificados 06/07/2026)
     CATEGORIA_IDS = {
-        # Nombres nuevos
-        "Competición":        9,
-        "Reviews":            19,
-        "Nuevos Lanzamientos": 15,
-        "Marcas":             44,
-        "Comparativas":       46,
-        "Historias Moteras":  47,
-        # Fallbacks nombres viejos del editor
-        "Noticias":           9,   # → Competición
-        "MotoGP":             9,   # → Competición
-        "Adventure":          15,  # → Nuevos Lanzamientos
-        "Custom":             44,  # → Marcas
-        "Electrica":          15,  # → Nuevos Lanzamientos
-        "Técnica":            19,  # → Reviews
-        "Tecnica":            19,  # → Reviews
-        "Seguridad":          19,  # → Reviews
+        "Reviews":             10,
+        "Nuevos Lanzamientos": 11,
+        "Competición":         12,
+        "Marcas":              13,
+        "Comparativas":        14,
+        "Historias Moteras":   15,
+        "Mecánica":            56,
+        "Mecanica":            56,
+        # Fallbacks por si el editor usa nombres alternativos
+        "Lanzamientos":        11,
+        "Noticias":            11,
+        "Historia":            15,
+        "Cultura":             15,
+        "Tecnica":             56,
+        "Técnica":             56,
+        "MotoGP":              12,
+        "Adventure":           11,
+        "Custom":              13,
     }
-    cat_nombre = a.get("categoria", "Reviews")
-    cat = CATEGORIA_IDS.get(cat_nombre, 19)  # default: Reviews (ID 19)
+    cat_nombre = a.get("categoria", "Nuevos Lanzamientos")
+    cat = CATEGORIA_IDS.get(cat_nombre, 11)  # default: Nuevos Lanzamientos
     print(f"  [Publisher] Categoría: '{cat_nombre}' → ID {cat}")
 
     # Usar fecha programada del main.py (1 artículo por día) o fallback mañana 10:00 AR
@@ -443,7 +446,7 @@ def actualizar_home_portada():
     WP_API = f"{WP_URL}/wp-json/wp/v2"
 
     CATEGORIAS = [
-        {"id": 19, "nombre": "Reviews",            "slug": "reviews"},
+        {"id": 10, "nombre": "Reviews",            "slug": "reviews"},
         {"id": 15, "nombre": "Nuevos Lanzamientos","slug": "nuevos-lanzamientos"},
         {"id": 9,  "nombre": "Competición",         "slug": "competicion"},
         {"id": 46, "nombre": "Comparativas",        "slug": "comparativas"},
