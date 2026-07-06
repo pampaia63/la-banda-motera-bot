@@ -207,10 +207,18 @@ def generar_articulo(noticia, voz):
         'launch', 'unveiled', 'revealed', 'announced', 'new model'
     ])
 
-    es_competicion = any(k in titulo_lower + resumen_lower for k in [
-        'motogp', 'superbike', 'worldsbk', 'carrera', 'campeonato', 'podio',
-        'gp ', 'gran premio', 'dakar', 'enduro', 'rally', 'resultado',
-        'ganador', 'gana', 'wins', 'race', 'championship'
+    es_mecanica = any(k in titulo_lower + resumen_lower for k in [
+        'desmodromic', 'desmo', 'telelever', 'duolever', 'paralever',
+        'boxer', 'motor boxer', 'v-twin', 'inline four', 'cuatro cilindros',
+        'refrigeracion liquida', 'refrigeracion aire', 'inyeccion electronica',
+        'carburador', 'frenos abs', 'control traccion', 'quickshifter',
+        'autoblipper', 'suspension', 'horquilla invertida', 'monoshock',
+        'monoamortiguador', 'basculante', 'chasis tubular', 'chasis perimetral',
+        'mecanica', 'tecnica', 'sistema', 'funcionamiento', 'como funciona',
+        'tecnologia moto', 'ingenieria moto', 'transmision cadena',
+        'transmision correa', 'transmision cardan', 'embrague', 'caja cambios',
+        'valvulas', 'arbol levas', 'cigüeñal', 'pistones', 'lubricacion',
+        'refrigeracion', 'escape', 'escape moto',
     ])
 
     # Prompt de LANZAMIENTO — corto, ficha técnica, mercados, fecha
@@ -225,7 +233,7 @@ TITULO: {noticia['titulo']}
 CONTEXTO: {noticia['resumen'][:400] if noticia.get('resumen') else 'Sin resumen'}
 URL: {noticia.get('url', '')}
 
-INSTRUCCIONES — NOTA DE LANZAMIENTO (máximo 600 palabras):
+INSTRUCCIONES — NOTA DE LANZAMIENTO (800-1000 palabras):
 1. Abrí con 2-3 oraciones de contexto editorial: por qué importa esta moto en el mercado actual.
 2. Contexto del segmento: qué lugar ocupa esta moto en el mercado, cómo llegó la marca hasta acá, qué vacío viene a llenar.
 3. Ficha técnica COMPLETA y detallada: motor, potencia, torque, cilindrada, refrigeración, caja de cambios, peso, altura de asiento, capacidad de tanque, neumáticos, frenos, suspensiones, electrónica.
@@ -238,13 +246,13 @@ INSTRUCCIONES — NOTA DE LANZAMIENTO (máximo 600 palabras):
 10. NO es una review de manejo, pero sí un análisis editorial profundo basado en specs y contexto de mercado.
 11. Usá el dialecto de tu perfil de forma natural.
 12. NUNCA copies el texto fuente — todo original desde tu conocimiento.
-IMPORTANTE: El artículo debe ser conciso y directo, máximo 600 palabras. Priorizá datos concretos sobre relleno.
+IMPORTANTE: El artículo debe tener entre 800 y 1000 palabras. Desarrollá cada sección con datos concretos y análisis editorial real, sin relleno.
 
 FORMATO JSON exacto:
 {{
   "titulo": "titulo SEO atractivo (máximo 65 caracteres)",
   "bajada": "1-2 oraciones de gancho para el lector",
-  "contenido_md": "la nota completa en markdown, 400-600 palabras",
+  "contenido_md": "la nota completa en markdown, 800-1000 palabras, mínimo 5 H2",
   "seo_title": "titulo SEO (máximo 60 caracteres)",
   "meta_description": "meta description (150-155 caracteres exactos)",
   "slug": "url-amigable-sin-tildes-ni-espacios",
@@ -256,60 +264,62 @@ FORMATO JSON exacto:
 
 Responde SOLO el JSON, sin texto antes ni después, sin backticks."""
 
-    # Prompt de COMPETICIÓN — resultados, datos, contexto de campeonato
-    elif es_competicion:
+    # Prompt de MECÁNICA — explicación técnica + comparativa con sistema convencional
+    elif es_mecanica:
         prompt = f"""Sos {voz['nombre']}, periodista de motos que escribe para La Banda Motera desde {voz['ubicacion']}.
 {voz['bio']}
 Dialecto: {voz['dialecto']}
 
-Escribi una nota de competición DIRECTA Y DINÁMICA sobre:
+Escribi un artículo de MECÁNICA Y TECNOLOGÍA MOTERA, educativo, claro y apasionante sobre:
 
 TITULO: {noticia['titulo']}
 CONTEXTO: {noticia['resumen'][:500] if noticia.get('resumen') else 'Sin resumen'}
 URL: {noticia.get('url', '')}
 
-INSTRUCCIONES — NOTA DE COMPETICIÓN (mínimo 1000 palabras):
-1. Abrí con el resultado central: quién ganó, en qué circuito, en qué campeonato.
-2. Desarrollá el relato de la carrera o evento: momentos clave, drama, batallas.
-3. Impacto en el campeonato: ¿cómo queda la tabla? ¿Qué significa para el título?
-4. Contexto de los protagonistas: resultados previos, situación en el campeonato.
-5. Párrafo de opinión editorial sobre lo que muestra esta carrera para el campeonato y el deporte.
-6. Datos técnicos si son relevantes: moto ganadora, setup notable, condiciones de pista.
-7. Historia del circuito o contexto del evento si suma información al lector.
-8. Usá 4-5 subtítulos H2 para estructurar bien el artículo.
-9. Tono dinámico, como si contaras la carrera a alguien que no la vio.
-10. NUNCA inventes resultados — solo lo que esté en el contexto provisto.
-IMPORTANTE: El artículo debe tener MÍNIMO 1000 palabras. Desarrollá cada sección con profundidad real.
+INSTRUCCIONES — ARTÍCULO DE MECÁNICA (1200-1500 palabras):
+1. Abrí con un párrafo de enganche: por qué este sistema o tecnología importa, qué problema vino a resolver.
+2. Explicá cómo funciona el sistema en detalle: componentes, principio físico, cómo interactúan las partes. Usá analogías simples para que lo entienda alguien que no es ingeniero.
+3. Historia y origen: quién lo inventó o desarrolló, en qué año, qué moto lo estrenó, cómo evolucionó.
+4. COMPARATIVA CON EL SISTEMA CONVENCIONAL: dedicá una sección completa a comparar este sistema con la solución tradicional (ej: Desmodromic vs resortes convencionales, Telelever vs horquilla telescópica, etc.). Ventajas y desventajas de cada uno, con datos concretos.
+5. Motos que lo usan hoy: modelos actuales que equipa este sistema, en qué segmentos se encuentra.
+6. ¿Vale la pena? Opinión editorial fundamentada: ¿es este sistema superior en todos los casos? ¿Tiene sentido en motos de calle? ¿Cuándo conviene y cuándo no?
+7. Datos técnicos donde corresponda: tolerancias, materiales, diferencias de mantenimiento, costos de servicio.
+8. Usá 5-6 H2 para estructurar. Tono educativo pero apasionado, no un manual de taller.
+9. Terminá con algo que el lector pueda llevarse: una frase o conclusión que cambie cómo mira esa tecnología.
+10. NUNCA inventes datos técnicos que no conozcas — si hay incertidumbre, marcala.
+IMPORTANTE: El artículo debe tener entre 1200 y 1500 palabras. Explicá bien, no apures.
 
 FORMATO JSON exacto:
 {{
   "titulo": "titulo SEO atractivo (máximo 65 caracteres)",
-  "bajada": "1-2 oraciones de gancho",
-  "contenido_md": "la nota completa en markdown, 700-900 palabras",
+  "bajada": "1-2 oraciones que expliquen de qué trata y por qué vale leerlo",
+  "contenido_md": "el artículo completo en markdown, 1200-1500 palabras, 5-6 H2",
   "seo_title": "titulo SEO (máximo 60 caracteres)",
   "meta_description": "meta description (150-155 caracteres exactos)",
   "slug": "url-amigable-sin-tildes-ni-espacios",
-  "categoria": "Competición",
-  "tags": ["tag1", "tag2", "tag3"],
-  "imagen_prompt": "prompt fotografico en inglés",
+  "categoria": "Mecánica",
+  "tags": ["tag1", "tag2", "tag3", "tag4"],
+  "imagen_prompt": "prompt fotografico en inglés mostrando el sistema mecánico",
   "imagenes_secciones": [
-    {{"seccion": "titulo exacto H2", "busqueda": "descripcion imagen"}}
+    {{"seccion": "titulo exacto H2", "busqueda": "descripcion imagen técnica"}}
   ]
 }}
 
 Responde SOLO el JSON, sin texto antes ni después, sin backticks."""
 
-    # Detectar si es Historias Moteras
+    # Detectar si es Historias Moteras / Cultura
     es_historia = any(k in titulo_lower + resumen_lower for k in [
         'historia', 'historico', 'icono', 'iconica', 'legendario', 'clasico',
         'cultura', 'motera', 'motero', 'origenes', 'fundacion', 'nacio',
         'personaje', 'piloto legendario', 'marca historica', 'moto clasica',
         'cafe racer', 'scrambler historia', 'custom historia', 'born to ride',
-        'comunidad', 'estilo de vida', 'lifestyle moto',
+        'comunidad', 'estilo de vida', 'lifestyle moto', 'patrimonio',
+        'aniversario', 'cumple anos', 'decadas', 'historia de la marca',
+        'evolucion', 'generaciones', 'clasico moderno',
     ])
 
     # Prompt de HISTORIAS MOTERAS — narrativo, cultural, evocador
-    if es_historia and not es_lanzamiento and not es_competicion:
+    if es_historia and not es_lanzamiento and not es_mecanica:
         prompt = f"""Sos {voz['nombre']}, periodista de motos que escribe para La Banda Motera desde {voz['ubicacion']}.
 {voz['bio']}
 Dialecto: {voz['dialecto']}
@@ -320,35 +330,41 @@ TITULO: {noticia['titulo']}
 CONTEXTO: {noticia['resumen'][:500] if noticia.get('resumen') else 'Sin resumen'}
 URL: {noticia.get('url', '')}
 
-INSTRUCCIONES — HISTORIA/CULTURA MOTERA (1200-1600 palabras):
-1. Tono narrativo, evocador, casi literario. Como si contaras una historia alrededor del fuego.
-2. Contexto histórico rico: fechas, personajes, hitos técnicos o culturales.
-3. Conectá el pasado con el presente: ¿por qué importa esto hoy?
-4. Si es sobre una moto icónica: motor, diseño, por qué marcó una época, quiénes la pilotaron.
-5. Si es sobre una marca: sus orígenes, fundadores, filosofía, modelos que la definieron.
-6. Si es sobre cultura/personajes: el impacto en la comunidad motera, anécdotas, legado.
-7. Opinión editorial al final: qué nos deja este pedazo de historia.
-8. 4-5 H2 para estructurar. Tono más pausado y reflexivo que una nota de lanzamiento.
-9. NUNCA copies texto fuente. Todo original desde tu conoc
-IMPORTANTE: El artículo completo debe tener MÍNIMO 1000 palabras (idealmente 1200-1600). Desarrollá con riqueza narrativa.imiento.
+INSTRUCCIONES — HISTORIA Y CULTURA MOTERA (1200-1600 palabras):
+Este artículo NO es una review de manejo ni una prueba técnica. Es un artículo de fondo sobre historia, cultura, identidad y significado.
+
+1. Tono narrativo, evocador, casi literario. Como si contaras una historia alrededor del fuego. El lector tiene que sentir que está leyendo algo que vale la pena leer despacio.
+2. Contexto histórico rico: fechas exactas, nombres de personas reales, hitos técnicos o culturales concretos. No generalidades — datos que anclen la historia en la realidad.
+3. Conectá el pasado con el presente: ¿por qué importa esto hoy? ¿Qué dejó en la cultura motera contemporánea?
+4. Si es sobre una moto icónica: cómo nació el proyecto, decisiones de diseño que la definieron, por qué marcó una época, quiénes la pilotaron, cómo fue recibida en su momento vs. cómo se la valora hoy.
+5. Si es sobre una marca: orígenes, fundadores y su visión, crisis y renacimientos, filosofía que la distingue, modelos que la definieron en cada era.
+6. Si es sobre cultura motera (café racer, scrambler, custom, etc.): dónde y cuándo surgió, qué lo impulsó, cómo evolucionó, quiénes son sus referentes actuales, por qué sigue vigente.
+7. Si es sobre un piloto o personaje: su impacto real en el deporte o la cultura, anécdotas concretas, lo que cambió gracias a él/ella, cómo se lo recuerda hoy.
+8. Párrafo de opinión editorial al final: qué nos deja esta historia, qué podemos aprender de ella, cómo cambia la forma de ver las motos de hoy.
+9. 4-5 H2 para estructurar. Tono más pausado y reflexivo que una nota de lanzamiento. No tengas apuro.
+10. NUNCA copies texto fuente. Todo original desde tu conocimiento y desde el contexto provisto.
+11. NO describas cómo se maneja la moto, no hagas análisis de suspensiones ni frenos desde la perspectiva de un test de ruta. Eso es una review. Esto es historia.
+IMPORTANTE: El artículo completo debe tener MÍNIMO 1200 palabras (idealmente 1400-1600). Desarrollá con riqueza narrativa real.
 
 FORMATO JSON exacto:
 {{
-  "titulo": "titulo SEO atractivo (máximo 65 caracteres)",
-  "bajada": "1-2 oraciones evocadoras de gancho",
+  "titulo": "titulo SEO atractivo y narrativo (máximo 65 caracteres)",
+  "bajada": "1-2 oraciones evocadoras que hagan querer seguir leyendo",
   "contenido_md": "el artículo completo en markdown, 1200-1600 palabras, 4-5 H2",
   "seo_title": "titulo SEO (máximo 60 caracteres)",
-  "meta_description": "meta description (150-155 caracteres exactos)",
+  "meta_description": "meta description narrativa (150-155 caracteres exactos)",
   "slug": "url-amigable-sin-tildes-ni-espacios",
   "categoria": "Historias Moteras",
-  "tags": ["tag1", "tag2", "tag3"],
-  "imagen_prompt": "prompt fotografico en inglés para imagen evocadora",
+  "tags": ["tag1", "tag2", "tag3", "tag4"],
+  "imagen_prompt": "prompt fotografico en inglés para imagen evocadora, vintage o cultural",
   "imagenes_secciones": []
 }}
 
 Responde SOLO el JSON, sin texto antes ni después, sin backticks."""
 
-    # Prompt de REVIEW / COMPARATIVA / MARCAS — extenso, profundo, ~2420 palabras
+    # Prompt de COMPARATIVAS / MARCAS — extenso, profundo, ~2420 palabras
+    # NOTA: Las reviews de manejo las genera Isaías Rider desde su canal de YouTube.
+    # El bot genera solo Comparativas y artículos de Marcas.
     else:
         prompt = f"""Sos {voz['nombre']}, periodista de motos que escribe para La Banda Motera desde {voz['ubicacion']}.
 {voz['bio']}
@@ -382,7 +398,7 @@ FORMATO JSON exacto:
   "seo_title": "titulo SEO (máximo 60 caracteres)",
   "meta_description": "meta description (150-155 caracteres exactos)",
   "slug": "url-amigable-sin-tildes-ni-espacios",
-  "categoria": "una de: Reviews | Comparativas | Marcas | Historias Moteras",
+  "categoria": "una de: Comparativas | Marcas",
   "tags": ["tag1", "tag2", "tag3", "tag4"],
   "imagen_prompt": "prompt fotografico en inglés para imagen destacada",
   "imagenes_secciones": [
@@ -394,7 +410,7 @@ Responde SOLO el JSON, sin texto antes ni después, sin backticks."""
 
 
     # Tokens adaptados por tipo: lanzamiento=2000, competicion=4000, review=8000
-    max_tok = 3500 if es_lanzamiento else (5000 if es_competicion else 8000)
+    max_tok = 4000 if es_lanzamiento else (6000 if es_mecanica else 8000)
     r = requests.post(
         "https://api.anthropic.com/v1/messages",
         headers={
