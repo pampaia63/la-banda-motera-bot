@@ -186,15 +186,45 @@ def titulo_similar(t1, t2, umbral=0.6):
     return similitud >= umbral
 
 def load_published():
+    """Carga hashes publicados. Soporta formato viejo (lista) y nuevo (dict con fecha).
+    Limpia automáticamente entradas con más de 60 días para evitar que el log
+    crezca indefinidamente y bloquee contenido potencialmente válido."""
     try:
         with open(PUBLISHED_LOG) as f:
-            return set(json.load(f))
+            data = json.load(f)
+        # Migrar formato viejo (lista) a nuevo (dict con fecha)
+        if isinstance(data, list):
+            # Formato viejo: asumir que todos son recientes, asignar fecha de hoy
+            hoy = datetime.utcnow().strftime("%Y-%m-%d")
+            data = {h: hoy for h in data}
+        # Limpiar entradas con más de 60 días
+        cutoff = (datetime.utcnow() - timedelta(days=60)).strftime("%Y-%m-%d")
+        data_limpio = {h: fecha for h, fecha in data.items() if fecha >= cutoff}
+        eliminados = len(data) - len(data_limpio)
+        if eliminados > 0:
+            print(f"  [Scout] Hash log: {eliminados} entradas expiradas eliminadas ({len(data_limpio)} activas)")
+        return set(data_limpio.keys())
     except FileNotFoundError:
         return set()
 
 def save_published(hashes):
+    """Guarda hashes con fecha actual. Mantiene entradas previas con su fecha original."""
+    try:
+        with open(PUBLISHED_LOG) as f:
+            existing = json.load(f)
+        if isinstance(existing, list):
+            existing = {h: (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d") for h in existing}
+    except FileNotFoundError:
+        existing = {}
+    hoy = datetime.utcnow().strftime("%Y-%m-%d")
+    for h in hashes:
+        if h not in existing:
+            existing[h] = hoy
+    # Limpiar expirados antes de guardar
+    cutoff = (datetime.utcnow() - timedelta(days=60)).strftime("%Y-%m-%d")
+    existing = {h: f for h, f in existing.items() if f >= cutoff}
     with open(PUBLISHED_LOG, "w") as f:
-        json.dump(list(hashes), f)
+        json.dump(existing, f)
 
 def slug_hash(title):
     return hashlib.md5(title.lower().strip().encode()).hexdigest()[:12]
@@ -236,10 +266,10 @@ def search_news(query, num=5, usar_medios_referencia=True, sin_fecha_limite=Fals
         "useAutoprompt": True,
         "contents": {"text": {"maxCharacters": 800}},
     }
-    # Noticias normales: solo últimos 14 días
+    # Noticias generales y lanzamientos: últimos 90 días (permite cubrir lanzamientos de 1-2 meses atrás)
     # Mecánica/historia: evergreen, sin límite de fecha
     if not sin_fecha_limite:
-        payload["startPublishedDate"] = (datetime.utcnow() - timedelta(days=14)).strftime("%Y-%m-%dT00:00:00Z")
+        payload["startPublishedDate"] = (datetime.utcnow() - timedelta(days=90)).strftime("%Y-%m-%dT00:00:00Z")
     if usar_medios_referencia and not sin_fecha_limite:
         payload["includeDomains"] = MEDIOS_REFERENCIA
 
@@ -273,7 +303,7 @@ def buscar_noticias(max_noticias=5):
     # 1. Buscar noticias recientes (últimos 14 días, medios de referencia)
     for q in QUERIES:
         try:
-            results = search_news(q, num=4)
+            results = search_news(q, num=6)
             for item in results:
                 title = item.get("title", "").strip()
                 url = item.get("url", "")
@@ -319,14 +349,15 @@ def buscar_noticias(max_noticias=5):
             continue
 
     # 2. Buscar contenido de mecánica (evergreen, sin límite de fecha)
-    # Si ya tenemos suficientes candidatos recientes, tomar solo 1 de mecánica
-    # para garantizar diversidad de tipos de artículo
+    # Siempre incluir al menos 1 artículo de mecánica por corrida para diversidad
+    # Si hay menos de max_noticias candidatos, rellenar con mecánica hasta completar
     slots_mecanica = max(1, max_noticias - len(candidatos))
+    print(f"  [Scout] Buscando mecánica ({slots_mecanica} slots disponibles)...")
     for q in QUERIES_MECANICA:
         if slots_mecanica <= 0:
             break
         try:
-            results = search_news(q, num=3, usar_medios_referencia=False, sin_fecha_limite=True)
+            results = search_news(q, num=5, usar_medios_referencia=False, sin_fecha_limite=True)
             for item in results:
                 title = item.get("title", "").strip()
                 url = item.get("url", "")
@@ -340,7 +371,7 @@ def buscar_noticias(max_noticias=5):
                 if es_duplicado:
                     continue
                 seen_hashes.add(h)
-                relevancia = calcular_relevancia(title, url, text) + 2  # bonus para garantizar inclusión
+                relevancia = calcular_relevancia(title, url, text) + 5  # bonus alto para garantizar inclusión
                 candidatos.append({
                     "titulo": title,
                     "url": url,
@@ -350,10 +381,55 @@ def buscar_noticias(max_noticias=5):
                     "tipo": "mecanica",
                 })
                 slots_mecanica -= 1
+                print(f"  [Scout] Mecánica encontrada: {title[:60]}")
                 break  # una por query es suficiente
         except Exception as e:
             print(f"  [Scout] Error en query mecánica '{q}': {e}")
             continue
+
+    # 3. Fallback final: si AÚN faltan slots, buscar historia/cultura evergreen
+    slots_restantes = max_noticias - len(candidatos)
+    if slots_restantes > 0:
+        print(f"  [Scout] Fallback historia/cultura ({slots_restantes} slots restantes)...")
+        QUERIES_HISTORIA_FALLBACK = [
+            "historia moto iconica clasica marca motocicleta origen fundacion",
+            "cafe racer scrambler custom moto historia cultura origen estilo",
+            "piloto moto legendario historia campeonato icono motociclismo",
+            "moto clasica vintage icono diseño historia evolucion generaciones",
+            "marca moto historia fundacion filosofia modelos emblematicos",
+        ]
+        for q in QUERIES_HISTORIA_FALLBACK:
+            if slots_restantes <= 0:
+                break
+            try:
+                results = search_news(q, num=5, usar_medios_referencia=False, sin_fecha_limite=True)
+                for item in results:
+                    title = item.get("title", "").strip()
+                    url = item.get("url", "")
+                    text = item.get("text", "")
+                    if not title or len(title) < 10:
+                        continue
+                    h = slug_hash(title)
+                    if h in seen_hashes:
+                        continue
+                    es_duplicado = any(titulo_similar(title, c["titulo"]) for c in candidatos)
+                    if es_duplicado:
+                        continue
+                    seen_hashes.add(h)
+                    candidatos.append({
+                        "titulo": title,
+                        "url": url,
+                        "resumen": text[:500] if text else "",
+                        "hash": h,
+                        "relevancia": 3,
+                        "tipo": "historia",
+                    })
+                    slots_restantes -= 1
+                    print(f"  [Scout] Historia encontrada: {title[:60]}")
+                    break
+            except Exception as e:
+                print(f"  [Scout] Error en fallback historia: {e}")
+                continue
 
     # Ordenar por relevancia descendente antes de tomar los primeros N
     candidatos.sort(key=lambda x: x.get("relevancia", 0), reverse=True)
