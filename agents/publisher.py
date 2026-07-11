@@ -5,6 +5,7 @@ import markdown2
 WP_URL = os.environ["WP_URL"].rstrip("/")
 WP_USER = os.environ["WP_USER"]
 WP_APP_PASS = os.environ["WP_APP_PASS"]
+EXA_API_KEY = os.environ.get("EXA_API_KEY", "")
 
 BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
 
