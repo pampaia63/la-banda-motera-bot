@@ -410,7 +410,7 @@ Responde SOLO el JSON, sin texto antes ni después, sin backticks."""
 
 
     # Tokens adaptados por tipo: lanzamiento=2000, competicion=4000, review=8000
-    max_tok = 4000 if es_lanzamiento else (6000 if es_mecanica else 8000)
+    max_tok = 6500 if es_lanzamiento else (9000 if es_mecanica else 12000)
     r = requests.post(
         "https://api.anthropic.com/v1/messages",
         headers={
